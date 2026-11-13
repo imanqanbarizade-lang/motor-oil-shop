@@ -19,7 +19,6 @@ export default function CartPage() {
       className="min-h-screen bg-gray-50 text-gray-800"
       dir="rtl"
     >
-      {/* هدر */}
       <header className="border-b border-gray-100 bg-white shadow-sm">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5">
           <Link href="/" className="text-2xl font-extrabold text-slate-900">
@@ -35,7 +34,6 @@ export default function CartPage() {
         </div>
       </header>
 
-      {/* محتوای اصلی */}
       <section className="mx-auto max-w-7xl px-5 py-12">
         <div className="mb-8">
           <h1 className="text-3xl font-extrabold text-slate-900">
@@ -48,7 +46,6 @@ export default function CartPage() {
         </div>
 
         {cartItems.length === 0 ? (
-          /* سبد خرید خالی */
           <div className="rounded-3xl border border-gray-100 bg-white px-5 py-20 text-center">
             <div className="mb-5 text-7xl">🛒</div>
 
@@ -69,7 +66,6 @@ export default function CartPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-            {/* فهرست محصولات */}
             <div className="space-y-5 lg:col-span-2">
               <div className="flex items-center justify-between rounded-2xl bg-white p-5">
                 <span className="font-bold text-slate-900">
@@ -86,7 +82,6 @@ export default function CartPage() {
                   key={product.id}
                   className="flex flex-col gap-5 rounded-2xl border border-gray-100 bg-white p-5 sm:flex-row"
                 >
-                  {/* تصویر محصول */}
                   <Link
                     href={`/products/${product.id}`}
                     className="relative flex h-40 w-full shrink-0 items-center justify-center rounded-xl bg-gray-50 sm:w-40"
@@ -100,7 +95,6 @@ export default function CartPage() {
                     />
                   </Link>
 
-                  {/* اطلاعات محصول */}
                   <div className="flex flex-1 flex-col justify-between gap-4">
                     <div>
                       <p className="text-sm font-bold text-orange-500">
@@ -126,7 +120,6 @@ export default function CartPage() {
                       </div>
                     </div>
 
-                    {/* کنترل تعداد و حذف */}
                     <div className="flex flex-wrap items-center justify-between gap-4">
                       <div className="flex items-center gap-3 rounded-xl border border-gray-200 p-2">
                         <button
@@ -167,7 +160,6 @@ export default function CartPage() {
               </button>
             </div>
 
-            {/* خلاصه سبد خرید */}
             <aside className="h-fit rounded-2xl border border-gray-100 bg-white p-6">
               <h2 className="text-lg font-extrabold text-slate-900">
                 خلاصه سفارش
@@ -194,12 +186,12 @@ export default function CartPage() {
                 </p>
               </div>
 
-              <button
-                disabled
-                className="mt-7 w-full cursor-not-allowed rounded-xl bg-gray-200 py-4 text-sm font-bold text-gray-500"
+              <Link
+                href="/checkout"
+                className="mt-7 block w-full rounded-xl bg-orange-500 py-4 text-center text-sm font-bold text-white transition hover:bg-orange-600"
               >
-                ادامه فرایند خرید (به‌زودی)
-              </button>
+                ادامه فرایند خرید
+              </Link>
 
               <Link
                 href="/categories/engine-oil"
@@ -212,7 +204,6 @@ export default function CartPage() {
         )}
       </section>
 
-      {/* فوتر */}
       <footer className="mt-16 bg-slate-950 px-5 py-8 text-center text-sm text-gray-400">
         <p>
           Oilino؛ انتخاب هوشمندانه برای سلامت موتور
