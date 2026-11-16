@@ -35,15 +35,15 @@ export interface OrderResponse {
   status: string;
   created_at: string;
   order_items?: OrderItem[];
+  payment_status: string;
+  payment_receipt: string | null;
+  payment_submitted_at: string | null;
 }
 
 async function getCsrfToken(): Promise<string> {
-  const response = await fetch(
-    `${API_BASE_URL}/auth/csrf/`,
-    {
-      credentials: "include",
-    }
-  );
+  const response = await fetch(`${API_BASE_URL}/auth/csrf/`, {
+    credentials: "include",
+  });
 
   if (!response.ok) {
     throw new Error("دریافت توکن امنیتی با خطا مواجه شد.");
@@ -65,18 +65,15 @@ export async function createOrder(
 ): Promise<OrderResponse> {
   const csrfToken = await getCsrfToken();
 
-  const response = await fetch(
-    `${API_BASE_URL}/orders/create/`,
-    {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRFToken": csrfToken,
-      },
-      body: JSON.stringify(orderData),
-    }
-  );
+  const response = await fetch(`${API_BASE_URL}/orders/create/`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": csrfToken,
+    },
+    body: JSON.stringify(orderData),
+  });
 
   const result = await response.json();
 
@@ -89,16 +86,10 @@ export async function createOrder(
 
 // دریافت تمام سفارش‌ها برای پنل مدیریت
 export async function getAdminOrders(): Promise<OrderResponse[]> {
-  const response = await fetch(
-    `${API_BASE_URL}/orders/admin/all/`,
-    {
-      method: "GET",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    }
-  );
+  const response = await fetch(`${API_BASE_URL}/orders/admin/all/`, {
+    method: "GET",
+    credentials: "include",
+  });
 
   if (!response.ok) {
     if (response.status === 401 || response.status === 403) {
@@ -109,4 +100,44 @@ export async function getAdminOrders(): Promise<OrderResponse[]> {
   }
 
   return response.json();
+}
+
+// پاسخ تغییر وضعیت پرداخت
+export interface PaymentReviewResponse {
+  message: string;
+  order_id: number;
+  payment_status: string;
+}
+
+// تأیید یا رد پرداخت توسط مدیر
+export async function reviewOrderPayment(
+  orderId: number,
+  paymentStatus: "approved" | "rejected"
+): Promise<PaymentReviewResponse> {
+  const csrfToken = await getCsrfToken();
+
+  const response = await fetch(
+    `${API_BASE_URL}/orders/admin/${orderId}/review-payment/`,
+    {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": csrfToken,
+      },
+      body: JSON.stringify({
+        payment_status: paymentStatus,
+      }),
+    }
+  );
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      result?.error || "تغییر وضعیت پرداخت با خطا مواجه شد."
+    );
+  }
+
+  return result;
 }

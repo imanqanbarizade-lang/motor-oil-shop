@@ -14,6 +14,18 @@ export default function CartPage() {
     cartCount,
   } = useCart();
 
+  const formatPrice = (price: number) =>
+    new Intl.NumberFormat("fa-IR").format(price);
+
+  const totalPrice = cartItems.reduce(
+    (total, product) => total + product.price * product.quantity,
+    0
+  );
+
+  const hasUnpricedProducts = cartItems.some(
+    (product) => product.price <= 0
+  );
+
   return (
     <main
       className="min-h-screen bg-gray-50 text-gray-800"
@@ -118,6 +130,33 @@ export default function CartPage() {
                           {product.volume}
                         </span>
                       </div>
+
+                      <div className="mt-4">
+                        {product.price > 0 ? (
+                          <>
+                            <p className="text-sm text-gray-500">
+                              قیمت هر عدد:
+                              <span className="mr-2 font-bold text-slate-800">
+                                {formatPrice(product.price)} تومان
+                              </span>
+                            </p>
+
+                            <p className="mt-2 text-sm font-bold text-orange-600">
+                              مبلغ این محصول:
+                              <span className="mr-2">
+                                {formatPrice(
+                                  product.price * product.quantity
+                                )}{" "}
+                                تومان
+                              </span>
+                            </p>
+                          </>
+                        ) : (
+                          <p className="text-sm font-bold text-red-500">
+                            قیمت این محصول هنوز تعیین نشده است.
+                          </p>
+                        )}
+                      </div>
                     </div>
 
                     <div className="flex flex-wrap items-center justify-between gap-4">
@@ -180,10 +219,16 @@ export default function CartPage() {
                   مبلغ سفارش
                 </p>
 
-                <p className="mt-3 text-sm leading-7 text-gray-500">
-                  قیمت محصولات هنوز در فروشگاه ثبت نشده است. مبلغ نهایی پس از
-                  تعیین قیمت محصولات محاسبه خواهد شد.
-                </p>
+                {hasUnpricedProducts ? (
+                  <p className="mt-3 text-sm leading-7 text-red-500">
+                    قیمت بعضی از محصولات هنوز تعیین نشده است.
+                    برای محاسبه مبلغ نهایی، ابتدا قیمت آن‌ها را مشخص کنید.
+                  </p>
+                ) : (
+                  <p className="mt-3 text-2xl font-extrabold text-orange-600">
+                    {formatPrice(totalPrice)} تومان
+                  </p>
+                )}
               </div>
 
               <Link

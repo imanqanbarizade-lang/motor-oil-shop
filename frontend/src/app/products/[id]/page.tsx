@@ -110,17 +110,37 @@ export default function ProductPage() {
     ? `روغن موتور ${brand} ${model}`.trim()
     : "";
 
+  const formattedPrice = product
+    ? new Intl.NumberFormat("fa-IR").format(product.price)
+    : "۰";
+
+  const isOutOfStock = product
+    ? product.stock <= 0 || !product.is_available
+    : false;
+
   const handleAddToCart = () => {
     if (!product) return;
 
+    if (isOutOfStock) {
+      setMessage("این محصول در حال حاضر موجود نیست.");
+      return;
+    }
+
+    if (product.price <= 0) {
+      setMessage("قیمت این محصول هنوز تعیین نشده است.");
+      return;
+    }
+
     addToCart({
       id: product.slug,
+      productId: product.id,
       name: productName,
       brand: brand,
       image: image,
       viscosity: product.viscosity,
       api: product.api_standard,
       volume: volume,
+      price: product.price,
     });
 
     setMessage("محصول با موفقیت به سبد خرید اضافه شد.");
@@ -206,7 +226,8 @@ export default function ProductPage() {
             </h1>
 
             <p className="text-gray-600 leading-8 mb-8">
-              {product.description || "توضیحات این محصول به‌زودی تکمیل می‌شود."}
+              {product.description ||
+                "توضیحات این محصول به‌زودی تکمیل می‌شود."}
             </p>
 
             <div className="grid grid-cols-2 gap-4 mb-8">
@@ -214,7 +235,6 @@ export default function ProductPage() {
                 <span className="text-sm text-gray-500">
                   گرید روغن
                 </span>
-
                 <p className="font-bold text-gray-800 mt-2">
                   {product.viscosity}
                 </p>
@@ -224,7 +244,6 @@ export default function ProductPage() {
                 <span className="text-sm text-gray-500">
                   استاندارد API
                 </span>
-
                 <p className="font-bold text-gray-800 mt-2">
                   {product.api_standard}
                 </p>
@@ -234,7 +253,6 @@ export default function ProductPage() {
                 <span className="text-sm text-gray-500">
                   حجم بسته‌بندی
                 </span>
-
                 <p className="font-bold text-gray-800 mt-2">
                   {volume}
                 </p>
@@ -244,7 +262,6 @@ export default function ProductPage() {
                 <span className="text-sm text-gray-500">
                   برند
                 </span>
-
                 <p className="font-bold text-gray-800 mt-2">
                   {brand}
                 </p>
@@ -252,19 +269,52 @@ export default function ProductPage() {
             </div>
 
             <div className="border-t border-gray-100 pt-6">
-              <p className="text-gray-500 mb-4">
-                قیمت محصول به‌زودی اعلام می‌شود.
-              </p>
+              {product.price > 0 ? (
+                <div className="mb-5">
+                  <span className="text-gray-500 text-sm">
+                    قیمت محصول
+                  </span>
+                  <p className="text-2xl font-bold text-blue-950 mt-2">
+                    {formattedPrice} تومان
+                  </p>
+                </div>
+              ) : (
+                <p className="text-gray-500 mb-5">
+                  قیمت این محصول هنوز تعیین نشده است.
+                </p>
+              )}
+
+              <div className="mb-5">
+                {isOutOfStock ? (
+                  <span className="inline-flex items-center rounded-lg bg-red-100 px-4 py-2 text-sm font-bold text-red-700">
+                    ناموجود
+                  </span>
+                ) : (
+                  <span className="text-sm font-medium text-green-700">
+                    موجود در انبار:{" "}
+                    {new Intl.NumberFormat("fa-IR").format(product.stock)} عدد
+                  </span>
+                )}
+              </div>
 
               <button
                 onClick={handleAddToCart}
-                className="w-full bg-orange-500 hover:bg-orange-600 text-white py-4 rounded-xl font-bold transition"
+                disabled={isOutOfStock || product.price <= 0}
+                className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-4 rounded-xl font-bold transition"
               >
-                افزودن به سبد خرید
+                {isOutOfStock
+                  ? "در حال حاضر ناموجود"
+                  : "افزودن به سبد خرید"}
               </button>
 
               {message && (
-                <p className="mt-4 text-center text-sm font-medium text-green-600">
+                <p
+                  className={`mt-4 text-center text-sm font-medium ${
+                    message.includes("موفقیت")
+                      ? "text-green-600"
+                      : "text-red-600"
+                  }`}
+                >
                   {message}
                 </p>
               )}

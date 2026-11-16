@@ -124,7 +124,6 @@ export default function Home() {
 
   const filteredProducts = products.filter((product) => {
     const searchText = searchTerm.trim().toLowerCase();
-
     const details = productDetails[product.slug];
 
     const productInfo = [
@@ -145,19 +144,16 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-gray-50 text-gray-800" dir="rtl">
-      {/* نوار بالایی */}
       <div className="bg-slate-950 py-2 text-center text-xs text-white">
         ارسال سریع | ضمانت اصالت کالا | خرید مطمئن از Oilino
       </div>
 
-      {/* هدر */}
       <header className="sticky top-0 z-50 border-b border-gray-100 bg-white shadow-sm">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-5 px-5 py-5">
           <Link href="/">
             <Logo />
           </Link>
 
-          {/* جست‌وجو */}
           <div className="min-w-60 flex-1 md:mx-8">
             <div className="relative">
               <input
@@ -194,7 +190,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* منوی سایت */}
         <nav className="border-t border-gray-100">
           <div className="mx-auto flex max-w-7xl flex-wrap gap-9 px-5 py-4 text-sm font-medium">
             <Link href="/" className="font-bold text-orange-500">
@@ -231,7 +226,6 @@ export default function Home() {
         </nav>
       </header>
 
-      {/* بنر اصلی */}
       <section className="mx-auto max-w-7xl px-5 py-10">
         <div className="relative flex flex-col items-center justify-between gap-10 overflow-hidden rounded-3xl bg-slate-950 px-8 py-16 text-white md:flex-row md:px-16">
           <div className="absolute -left-20 -top-20 h-72 w-72 rounded-full bg-orange-500 opacity-10 blur-3xl" />
@@ -272,7 +266,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* مزیت‌های فروشگاه */}
       <section className="mx-auto grid max-w-7xl grid-cols-2 gap-4 px-5 py-5 md:grid-cols-4">
         {[
           { icon: "✓", title: "ضمانت اصالت کالا", desc: "خرید با اطمینان" },
@@ -296,7 +289,6 @@ export default function Home() {
         ))}
       </section>
 
-      {/* دسته‌بندی محصولات */}
       <section className="mx-auto max-w-7xl px-5 py-14">
         <div className="mb-8">
           <h2 className="text-2xl font-extrabold text-slate-900">
@@ -335,14 +327,13 @@ export default function Home() {
         </div>
       </section>
 
-      {/* محصولات روغن موتور */}
       <section
         id="products"
         className="mx-auto max-w-7xl px-5 py-12"
       >
         <div className="mb-8">
           <h2 className="text-2xl font-extrabold text-slate-900">
-            روغن موتورهای موجود
+            محصولات روغن موتور
           </h2>
 
           <p className="mt-2 text-sm text-gray-500">
@@ -376,6 +367,8 @@ export default function Home() {
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-4">
               {filteredProducts.map((product) => {
                 const details = productDetails[product.slug];
+                const isOutOfStock =
+                  product.stock <= 0 || !product.is_available;
 
                 return (
                   <div
@@ -389,10 +382,18 @@ export default function Home() {
                           alt={`${details.brand} ${product.viscosity}`}
                           fill
                           sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 25vw"
-                          className="object-contain p-3"
+                          className={`object-contain p-3 ${
+                            isOutOfStock ? "opacity-50" : ""
+                          }`}
                         />
                       ) : (
                         <span className="text-5xl">🛢️</span>
+                      )}
+
+                      {isOutOfStock && (
+                        <span className="absolute right-3 top-3 rounded-lg bg-red-600 px-3 py-2 text-xs font-bold text-white">
+                          ناموجود
+                        </span>
                       )}
                     </div>
 
@@ -420,15 +421,34 @@ export default function Home() {
                       </span>
                     </div>
 
-                    <div className="mt-4 flex items-center justify-between">
-                      <span className="text-xs text-gray-400">
+                    {product.price > 0 ? (
+                      <p className="mt-4 font-bold text-slate-900">
+                        {new Intl.NumberFormat("fa-IR").format(product.price)}{" "}
+                        تومان
+                      </p>
+                    ) : (
+                      <p className="mt-4 text-xs text-gray-400">
                         قیمت به‌زودی
-                      </span>
-                    </div>
+                      </p>
+                    )}
+
+                    <p
+                      className={`mt-3 text-xs font-medium ${
+                        isOutOfStock ? "text-red-600" : "text-green-700"
+                      }`}
+                    >
+                      {isOutOfStock
+                        ? "این محصول در حال حاضر موجود نیست."
+                        : `موجودی: ${new Intl.NumberFormat("fa-IR").format(product.stock)} عدد`}
+                    </p>
 
                     <Link
                       href={`/products/${product.slug}`}
-                      className="mt-5 block w-full rounded-xl bg-slate-900 py-3 text-center text-sm font-bold text-white transition hover:bg-orange-500"
+                      className={`mt-5 block w-full rounded-xl py-3 text-center text-sm font-bold text-white transition ${
+                        isOutOfStock
+                          ? "bg-gray-500 hover:bg-gray-600"
+                          : "bg-slate-900 hover:bg-orange-500"
+                      }`}
                     >
                       مشاهده محصول
                     </Link>
@@ -451,7 +471,7 @@ export default function Home() {
 
                 <button
                   onClick={() => setSearchTerm("")}
-                  className="mt-6 rounded-xl bg-orange-500 px-6 py-3 text-sm font-bold text-white transition hover:bg-orange-600"
+                  className="mt-6 rounded-xl bg-orange-500 px-6 py-3 text-sm font-bold text-white transition"
                 >
                   پاک کردن جست‌وجو
                 </button>
@@ -461,7 +481,6 @@ export default function Home() {
         )}
       </section>
 
-      {/* بنر پایانی */}
       <section className="mx-auto max-w-7xl px-5 py-10">
         <div className="rounded-3xl bg-orange-500 px-8 py-12 text-center text-white">
           <h2 className="text-2xl font-extrabold md:text-3xl">
@@ -474,7 +493,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* فوتر */}
       <footer className="mt-10 bg-slate-950 px-5 py-12 text-center text-white">
         <div className="flex justify-center">
           <Logo />

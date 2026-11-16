@@ -26,6 +26,10 @@ class OrderSerializer(serializers.ModelSerializer):
         read_only=True
     )
 
+    payment_receipt = serializers.ImageField(
+        read_only=True
+    )
+
     class Meta:
         model = Order
 
@@ -42,6 +46,9 @@ class OrderSerializer(serializers.ModelSerializer):
             "order_items",
             "total_amount",
             "status",
+            "payment_status",
+            "payment_receipt",
+            "payment_submitted_at",
             "created_at",
         ]
 
@@ -50,6 +57,9 @@ class OrderSerializer(serializers.ModelSerializer):
             "order_items",
             "total_amount",
             "status",
+            "payment_status",
+            "payment_receipt",
+            "payment_submitted_at",
             "created_at",
         ]
 

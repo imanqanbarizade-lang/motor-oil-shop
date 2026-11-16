@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { API_BASE_URL } from "@/lib/api";
 import {
   getAdminOrders,
+  reviewOrderPayment,
   type OrderResponse,
 } from "@/lib/orders";
 
@@ -13,6 +15,10 @@ export default function OrdersPage() {
   const [error, setError] = useState("");
   const [selectedOrder, setSelectedOrder] =
     useState<OrderResponse | null>(null);
+
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewMessage, setReviewMessage] = useState("");
+  const [reviewError, setReviewError] = useState("");
 
   useEffect(() => {
     async function loadOrders() {
@@ -59,6 +65,75 @@ export default function OrdersPage() {
     delivered: "bg-green-50 text-green-700",
     cancelled: "bg-red-50 text-red-700",
   };
+
+  const paymentLabels: Record<string, string> = {
+    unpaid: "پرداخت نشده",
+    pending_review: "در انتظار تأیید پرداخت",
+    approved: "پرداخت تأیید شده",
+    rejected: "فیش پرداخت رد شده",
+  };
+
+  const paymentColors: Record<string, string> = {
+    unpaid: "bg-gray-100 text-gray-600",
+    pending_review: "bg-yellow-100 text-yellow-800",
+    approved: "bg-green-100 text-green-700",
+    rejected: "bg-red-100 text-red-700",
+  };
+
+  function getReceiptUrl(receipt: string) {
+    if (receipt.startsWith("http://") || receipt.startsWith("https://")) {
+      return receipt;
+    }
+
+    const serverUrl = API_BASE_URL.replace(/\/api\/?$/, "");
+    return `${serverUrl}${receipt.startsWith("/") ? "" : "/"}${receipt}`;
+  }
+
+  async function handlePaymentReview(
+    paymentStatus: "approved" | "rejected"
+  ) {
+    if (!selectedOrder) return;
+
+    const confirmationMessage =
+      paymentStatus === "approved"
+        ? "آیا از تأیید پرداخت این سفارش مطمئن هستید؟"
+        : "آیا از رد فیش واریزی این سفارش مطمئن هستید؟";
+
+    if (!window.confirm(confirmationMessage)) return;
+
+    setReviewLoading(true);
+    setReviewError("");
+    setReviewMessage("");
+
+    try {
+      const result = await reviewOrderPayment(
+        selectedOrder.id,
+        paymentStatus
+      );
+
+      const updatedOrder = {
+        ...selectedOrder,
+        payment_status: result.payment_status,
+      };
+
+      setOrders((previousOrders) =>
+        previousOrders.map((order) =>
+          order.id === selectedOrder.id ? updatedOrder : order
+        )
+      );
+
+      setSelectedOrder(updatedOrder);
+      setReviewMessage(result.message);
+    } catch (err) {
+      setReviewError(
+        err instanceof Error
+          ? err.message
+          : "تغییر وضعیت پرداخت با خطا مواجه شد."
+      );
+    } finally {
+      setReviewLoading(false);
+    }
+  }
 
   return (
     <main dir="rtl" className="min-h-screen bg-slate-100 text-slate-800">
@@ -126,7 +201,7 @@ export default function OrdersPage() {
               </h2>
 
               <p className="mt-2 text-sm text-slate-500">
-                مشاهده و بررسی سفارش‌های مشتریان
+                مشاهده سفارش‌ها و بررسی پرداخت مشتریان
               </p>
             </div>
 
@@ -151,12 +226,14 @@ export default function OrdersPage() {
 
             <div className="rounded-2xl bg-white p-6 shadow-sm">
               <p className="text-sm text-slate-500">
-                سفارش‌های در انتظار بررسی
+                پرداخت‌های در انتظار بررسی
               </p>
 
               <p className="mt-3 text-3xl font-black text-orange-500">
                 {formatNumber(
-                  orders.filter((order) => order.status === "pending").length
+                  orders.filter(
+                    (order) => order.payment_status === "pending_review"
+                  ).length
                 )}
               </p>
             </div>
@@ -204,7 +281,7 @@ export default function OrdersPage() {
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full min-w-[850px] text-right text-sm">
+                    <table className="w-full min-w-[1050px] text-right text-sm">
 
                       <thead className="bg-slate-50 text-slate-500">
                         <tr>
@@ -213,7 +290,8 @@ export default function OrdersPage() {
                           <th className="px-6 py-4">شماره تماس</th>
                           <th className="px-6 py-4">مبلغ سفارش</th>
                           <th className="px-6 py-4">تاریخ ثبت</th>
-                          <th className="px-6 py-4">وضعیت</th>
+                          <th className="px-6 py-4">وضعیت سفارش</th>
+                          <th className="px-6 py-4">وضعیت پرداخت</th>
                         </tr>
                       </thead>
 
@@ -264,6 +342,18 @@ export default function OrdersPage() {
                                 {statusLabels[order.status] ?? order.status}
                               </span>
                             </td>
+
+                            <td className="px-6 py-5">
+                              <span
+                                className={`whitespace-nowrap rounded-full px-3 py-2 text-xs font-bold ${
+                                  paymentColors[order.payment_status] ??
+                                  "bg-gray-100 text-gray-600"
+                                }`}
+                              >
+                                {paymentLabels[order.payment_status] ??
+                                  order.payment_status}
+                              </span>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -288,7 +378,11 @@ export default function OrdersPage() {
                     </div>
 
                     <button
-                      onClick={() => setSelectedOrder(null)}
+                      onClick={() => {
+                        setSelectedOrder(null);
+                        setReviewMessage("");
+                        setReviewError("");
+                      }}
                       className="rounded-xl bg-slate-100 px-4 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-200"
                     >
                       بستن جزئیات
@@ -427,6 +521,110 @@ export default function OrdersPage() {
                       </p>
                     </div>
                   )}
+
+                  {/* بخش بررسی پرداخت */}
+                  <div className="mt-8 rounded-2xl border border-slate-200 p-5">
+                    <h4 className="mb-4 font-black text-slate-800">
+                      بررسی پرداخت
+                    </h4>
+
+                    <div className="mb-5 flex flex-wrap items-center gap-3">
+                      <span className="text-sm text-slate-500">
+                        وضعیت فعلی پرداخت:
+                      </span>
+
+                      <span
+                        className={`rounded-full px-3 py-2 text-xs font-bold ${
+                          paymentColors[selectedOrder.payment_status] ??
+                          "bg-gray-100 text-gray-600"
+                        }`}
+                      >
+                        {paymentLabels[selectedOrder.payment_status] ??
+                          selectedOrder.payment_status}
+                      </span>
+                    </div>
+
+                    {selectedOrder.payment_receipt ? (
+                      <div>
+                        <p className="mb-3 text-sm font-bold text-slate-700">
+                          تصویر فیش واریزی مشتری
+                        </p>
+
+                        <a
+                          href={getReceiptUrl(selectedOrder.payment_receipt)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex rounded-xl bg-slate-100 px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-200"
+                        >
+                          مشاهده تصویر فیش
+                        </a>
+
+                        <div className="mt-4 max-w-md overflow-hidden rounded-xl border border-slate-200">
+                          <img
+                            src={getReceiptUrl(selectedOrder.payment_receipt)}
+                            alt="تصویر فیش واریزی"
+                            className="h-auto max-h-96 w-full object-contain"
+                          />
+                        </div>
+
+                        {selectedOrder.payment_submitted_at && (
+                          <p className="mt-3 text-xs text-slate-500">
+                            زمان ارسال فیش:{" "}
+                            {new Date(
+                              selectedOrder.payment_submitted_at
+                            ).toLocaleString("fa-IR")}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="rounded-xl bg-yellow-50 p-4 text-sm text-yellow-800">
+                        هنوز فیش واریزی برای این سفارش ارسال نشده است.
+                      </p>
+                    )}
+
+                    {selectedOrder.payment_status === "pending_review" &&
+                      selectedOrder.payment_receipt && (
+                        <div className="mt-6 flex flex-wrap gap-3">
+                          <button
+                            type="button"
+                            disabled={reviewLoading}
+                            onClick={() =>
+                              handlePaymentReview("approved")
+                            }
+                            className="rounded-xl bg-green-600 px-6 py-3 text-sm font-bold text-white transition hover:bg-green-700 disabled:opacity-50"
+                          >
+                            {reviewLoading
+                              ? "در حال ثبت..."
+                              : "تأیید پرداخت"}
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={reviewLoading}
+                            onClick={() =>
+                              handlePaymentReview("rejected")
+                            }
+                            className="rounded-xl bg-red-600 px-6 py-3 text-sm font-bold text-white transition hover:bg-red-700 disabled:opacity-50"
+                          >
+                            {reviewLoading
+                              ? "در حال ثبت..."
+                              : "رد فیش واریزی"}
+                          </button>
+                        </div>
+                      )}
+
+                    {reviewMessage && (
+                      <div className="mt-5 rounded-xl bg-green-50 p-4 text-sm text-green-700">
+                        {reviewMessage}
+                      </div>
+                    )}
+
+                    {reviewError && (
+                      <div className="mt-5 rounded-xl bg-red-50 p-4 text-sm text-red-700">
+                        {reviewError}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </>

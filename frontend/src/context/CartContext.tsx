@@ -10,12 +10,14 @@ import {
 
 export type CartProduct = {
   id: string;
+  productId: number;
   name: string;
   brand: string;
   image: string;
   viscosity: string;
   api: string;
   volume: string;
+  price: number;
   quantity: number;
 };
 
@@ -40,7 +42,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     if (savedCart) {
       try {
-        setCartItems(JSON.parse(savedCart));
+        const parsedCart = JSON.parse(savedCart);
+
+        const updatedCart = parsedCart.map((item: CartProduct) => ({
+          ...item,
+          price: Number(item.price ?? 0),
+        }));
+
+        setCartItems(updatedCart);
       } catch {
         setCartItems([]);
       }
@@ -64,7 +73,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
       if (existingProduct) {
         return currentItems.map((item) =>
           item.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
+            ? {
+                ...product,
+                quantity: item.quantity + 1,
+              }
             : item
         );
       }

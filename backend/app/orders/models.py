@@ -14,6 +14,13 @@ class Order(models.Model):
         ("cancelled", "لغو شده"),
     ]
 
+    PAYMENT_STATUS_CHOICES = [
+        ("unpaid", "پرداخت نشده"),
+        ("pending_review", "در انتظار تأیید پرداخت"),
+        ("approved", "پرداخت تأیید شده"),
+        ("rejected", "فیش پرداخت رد شده"),
+    ]
+
     full_name = models.CharField(
         max_length=150,
         verbose_name="نام و نام خانوادگی"
@@ -59,6 +66,26 @@ class Order(models.Model):
         choices=STATUS_CHOICES,
         default="pending",
         verbose_name="وضعیت سفارش"
+    )
+
+    payment_status = models.CharField(
+        max_length=20,
+        choices=PAYMENT_STATUS_CHOICES,
+        default="unpaid",
+        verbose_name="وضعیت پرداخت"
+    )
+
+    payment_receipt = models.ImageField(
+        upload_to="payment_receipts/",
+        blank=True,
+        null=True,
+        verbose_name="تصویر فیش واریزی"
+    )
+
+    payment_submitted_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        verbose_name="زمان ارسال فیش"
     )
 
     created_at = models.DateTimeField(

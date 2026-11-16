@@ -1,10 +1,101 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { useCart } from "../../context/CartContext";
+import { createOrder } from "../../lib/api";
 
 export default function CheckoutPage() {
-  const { cartItems, cartCount } = useCart();
+  const router = useRouter();
+  const { cartItems, cartCount, clearCart } = useCart();
+
+  const [formData, setFormData] = useState({
+    full_name: "",
+    phone: "",
+    province: "",
+    city: "",
+    address: "",
+    postal_code: "",
+    description: "",
+  });
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const inputClass =
+    "w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-gray-800 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100";
+
+  const hasInvalidProduct = cartItems.some(
+    (item) => !Number.isInteger(item.productId) || item.productId <= 0
+  );
+
+  const handleChange = (
+    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = event.target;
+
+    setFormData((current) => ({
+      ...current,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError("");
+
+    if (hasInvalidProduct) {
+      setError(
+        "اطلاعات بعضی محصولات قدیمی است. لطفاً محصولات را از سبد خرید حذف کنید و دوباره از فروشگاه اضافه کنید."
+      );
+      return;
+    }
+
+    if (cartItems.length === 0) {
+      setError("سبد خرید شما خالی است.");
+      return;
+    }
+
+    if (!/^09\d{9}$/.test(formData.phone.trim())) {
+      setError("شماره تماس باید با 09 شروع شود و ۱۱ رقم داشته باشد.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const result = await createOrder({
+        ...formData,
+        full_name: formData.full_name.trim(),
+        phone: formData.phone.trim(),
+        province: formData.province.trim(),
+        city: formData.city.trim(),
+        address: formData.address.trim(),
+        postal_code: formData.postal_code.trim(),
+        description: formData.description.trim(),
+        items: cartItems.map((item) => ({
+          product_id: item.productId,
+          quantity: item.quantity,
+        })),
+      });
+
+      clearCart();
+
+      router.push(
+        `/checkout/success?order=${result.id}&amount=${result.total_amount}`
+      );
+    } catch (err) {
+      console.error("خطا در ثبت سفارش:", err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "ثبت سفارش با خطای نامشخص مواجه شد."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <main className="min-h-screen bg-gray-50 text-gray-800" dir="rtl">
@@ -52,39 +143,84 @@ export default function CheckoutPage() {
         ) : (
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
             <div className="space-y-6 lg:col-span-2">
-              <div className="rounded-2xl border border-gray-100 bg-white p-6">
+              <form
+                onSubmit={handleSubmit}
+                className="rounded-2xl border border-gray-100 bg-white p-6"
+              >
                 <h2 className="mb-6 text-xl font-extrabold text-slate-900">
                   اطلاعات خریدار و گیرنده
                 </h2>
 
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                  {[
-                    { label: "نام و نام خانوادگی", placeholder: "نام کامل" },
-                    { label: "شماره تماس", placeholder: "09xxxxxxxxx" },
-                    { label: "استان", placeholder: "نام استان" },
-                    { label: "شهر", placeholder: "نام شهر" },
-                  ].map((field) => (
-                    <div key={field.label}>
-                      <label className="mb-2 block text-sm font-bold">
-                        {field.label} *
-                      </label>
-                      <input
-                        disabled
-                        placeholder={field.placeholder}
-                        className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-500"
-                      />
-                    </div>
-                  ))}
+                  <div>
+                    <label className="mb-2 block text-sm font-bold">
+                      نام و نام خانوادگی *
+                    </label>
+                    <input
+                      required
+                      name="full_name"
+                      value={formData.full_name}
+                      onChange={handleChange}
+                      placeholder="نام کامل"
+                      className={inputClass}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-bold">
+                      شماره تماس *
+                    </label>
+                    <input
+                      required
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleChange}
+                      placeholder="09xxxxxxxxx"
+                      className={inputClass}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-bold">
+                      استان *
+                    </label>
+                    <input
+                      required
+                      name="province"
+                      value={formData.province}
+                      onChange={handleChange}
+                      placeholder="نام استان"
+                      className={inputClass}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-bold">
+                      شهر *
+                    </label>
+                    <input
+                      required
+                      name="city"
+                      value={formData.city}
+                      onChange={handleChange}
+                      placeholder="نام شهر"
+                      className={inputClass}
+                    />
+                  </div>
 
                   <div className="sm:col-span-2">
                     <label className="mb-2 block text-sm font-bold">
                       آدرس کامل *
                     </label>
                     <textarea
-                      disabled
+                      required
                       rows={4}
-                      placeholder="آدرس دقیق محل تحویل سفارش"
-                      className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-500"
+                      name="address"
+                      value={formData.address}
+                      onChange={handleChange}
+                      placeholder="آدرس محل تحویل سفارش"
+                      className={inputClass}
                     />
                   </div>
 
@@ -93,9 +229,11 @@ export default function CheckoutPage() {
                       کد پستی
                     </label>
                     <input
-                      disabled
+                      name="postal_code"
+                      value={formData.postal_code}
+                      onChange={handleChange}
                       placeholder="کد پستی (اختیاری)"
-                      className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-500"
+                      className={inputClass}
                     />
                   </div>
 
@@ -104,17 +242,36 @@ export default function CheckoutPage() {
                       توضیحات سفارش
                     </label>
                     <input
-                      disabled
+                      name="description"
+                      value={formData.description}
+                      onChange={handleChange}
                       placeholder="توضیحات اضافی (اختیاری)"
-                      className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-500"
+                      className={inputClass}
                     />
                   </div>
                 </div>
 
-                <p className="mt-5 text-xs text-gray-400">
-                  تکمیل فرم پس از نهایی شدن قیمت محصولات فعال خواهد شد.
-                </p>
-              </div>
+                {hasInvalidProduct && (
+                  <p className="mt-5 rounded-xl bg-orange-50 p-4 text-sm leading-7 text-orange-700">
+                    محصولات موجود در سبد خرید از نسخه قبلی هستند. آن‌ها را از
+                    سبد خرید حذف کنید و دوباره از صفحه محصولات اضافه کنید.
+                  </p>
+                )}
+
+                {error && (
+                  <p className="mt-5 rounded-xl bg-red-50 p-4 text-sm leading-7 text-red-600">
+                    {error}
+                  </p>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading || hasInvalidProduct}
+                  className="mt-7 w-full rounded-xl bg-orange-500 py-4 text-sm font-bold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-gray-300"
+                >
+                  {loading ? "در حال ثبت سفارش..." : "ثبت سفارش"}
+                </button>
+              </form>
             </div>
 
             <aside className="h-fit rounded-2xl border border-gray-100 bg-white p-6">
@@ -152,17 +309,9 @@ export default function CheckoutPage() {
               </div>
 
               <p className="mt-5 rounded-xl bg-orange-50 p-4 text-sm leading-7 text-orange-700">
-                قیمت محصولات هنوز تعیین نشده است. پس از تکمیل قیمت‌گذاری،
-                امکان ثبت سفارش فعال خواهد شد.
+                مبلغ نهایی سفارش در سمت سرور و بر اساس قیمت ثبت‌شده محصولات
+                محاسبه می‌شود.
               </p>
-
-              <button
-                type="button"
-                disabled
-                className="mt-7 w-full cursor-not-allowed rounded-xl bg-gray-300 py-4 text-sm font-bold text-gray-500"
-              >
-                ثبت سفارش پس از تعیین قیمت‌ها فعال می‌شود
-              </button>
             </aside>
           </div>
         )}

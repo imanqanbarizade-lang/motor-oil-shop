@@ -1,4 +1,4 @@
-export const API_BASE_URL = "http://localhost:8000/api";
+export const API_BASE_URL = "http://127.0.0.1:8000/api";
 
 // نوع اطلاعات دسته‌بندی
 export interface ApiCategory {
@@ -50,6 +50,41 @@ export interface AdminLoginData {
 export interface AdminLoginResponse {
   message: string;
   username: string;
+}
+
+// اطلاعات یک محصول در سفارش
+export interface CreateOrderItemData {
+  product_id: number;
+  quantity: number;
+}
+
+// اطلاعات موردنیاز برای ثبت سفارش
+export interface CreateOrderData {
+  full_name: string;
+  phone: string;
+  province: string;
+  city: string;
+  address: string;
+  postal_code: string;
+  description: string;
+  items: CreateOrderItemData[];
+}
+
+// پاسخ ثبت سفارش
+export interface CreateOrderResponse {
+  id: number;
+  full_name: string;
+  phone: string;
+  total_amount: number;
+  status: string;
+  created_at: string;
+}
+
+// پاسخ ارسال فیش واریزی
+export interface UploadReceiptResponse {
+  message: string;
+  order_id: number;
+  payment_status: string;
 }
 
 // گزارش هوشمند انبار
@@ -261,6 +296,70 @@ export async function updateProduct(
   }
 
   return errorData;
+}
+
+// ثبت سفارش مشتری
+export async function createOrder(
+  orderData: CreateOrderData
+): Promise<CreateOrderResponse> {
+  const csrfToken = await getCsrfToken();
+
+  const response = await fetch(
+    `${API_BASE_URL}/orders/create/`,
+    {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": csrfToken,
+      },
+      body: JSON.stringify(orderData),
+    }
+  );
+
+  const result = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(
+      result
+        ? JSON.stringify(result)
+        : "ثبت سفارش با خطا مواجه شد."
+    );
+  }
+
+  return result;
+}
+
+// ارسال فیش واریزی سفارش
+export async function uploadOrderReceipt(
+  orderId: number,
+  phone: string,
+  receipt: File
+): Promise<UploadReceiptResponse> {
+  const formData = new FormData();
+
+  formData.append("phone", phone);
+  formData.append("payment_receipt", receipt);
+
+  const response = await fetch(
+    `${API_BASE_URL}/orders/${orderId}/upload-receipt/`,
+    {
+      method: "POST",
+      body: formData,
+    }
+  );
+
+  const result = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(
+      result
+        ? JSON.stringify(result)
+        : "ارسال فیش واریزی با خطا مواجه شد."
+    );
+  }
+
+  return result;
 }
 
 // دریافت گزارش موجودی انبار
