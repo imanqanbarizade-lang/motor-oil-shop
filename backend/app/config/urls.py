@@ -10,35 +10,24 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST
 
 
-# دریافت توکن امنیتی CSRF
 @ensure_csrf_cookie
 def csrf_token_view(request):
-    return JsonResponse({
-        "message": "CSRF cookie set successfully"
-    })
+    return JsonResponse({"message": "CSRF cookie set successfully"})
 
 
-# ورود مدیر
 @require_POST
 def admin_login_view(request):
-
     try:
         data = json.loads(request.body)
-
         username = data.get("username")
         password = data.get("password")
-
     except (json.JSONDecodeError, AttributeError):
         return JsonResponse(
             {"error": "اطلاعات ارسال‌شده معتبر نیست."},
             status=400
         )
 
-    user = authenticate(
-        request,
-        username=username,
-        password=password
-    )
+    user = authenticate(request, username=username, password=password)
 
     if user is None:
         return JsonResponse(
@@ -60,34 +49,22 @@ def admin_login_view(request):
     })
 
 
-# آدرس‌های اصلی پروژه
 urlpatterns = [
+    path("admin/", admin.site.urls),
 
-    path('admin/', admin.site.urls),
+    # احراز هویت و ورود مدیر
+    path("api/auth/csrf/", csrf_token_view, name="csrf-token"),
+    path("api/auth/login/", admin_login_view, name="admin-login"),
 
-    # دریافت CSRF
-    path(
-        'api/auth/csrf/',
-        csrf_token_view,
-        name='csrf-token'
-    ),
+    # مسیرهای حساب مشتری
+    path("api/", include("accounts.urls")),
 
-    # ورود مدیر
-    path(
-        'api/auth/login/',
-        admin_login_view,
-        name='admin-login'
-    ),
-
-    # API محصولات
-    path('api/', include('products.urls')),
-
-    # API سفارش‌ها
-    path('api/', include('orders.urls')),
+    # مسیرهای محصولات و سفارش‌ها
+    path("api/", include("products.urls")),
+    path("api/", include("orders.urls")),
 ]
 
 
-# نمایش فایل‌های رسانه‌ای در محیط توسعه
 if settings.DEBUG:
     urlpatterns += static(
         settings.MEDIA_URL,

@@ -1,6 +1,6 @@
 export const API_BASE_URL = "http://localhost:8000/api";
 
-// نوع اطلاعات دسته‌بندی
+// اطلاعات دسته‌بندی
 export interface ApiCategory {
   id: number;
   name: string;
@@ -8,7 +8,7 @@ export interface ApiCategory {
   description: string | null;
 }
 
-// نوع اطلاعات محصولات
+// اطلاعات محصولات
 export interface ApiProduct {
   id: number;
   slug: string;
@@ -27,7 +27,7 @@ export interface ApiProduct {
   updated_at: string;
 }
 
-// اطلاعات موردنیاز برای ثبت محصول
+// اطلاعات ثبت محصول
 export interface CreateProductData {
   category_id: number;
   name: string;
@@ -41,7 +41,7 @@ export interface CreateProductData {
   is_available: boolean;
 }
 
-// اطلاعات ورود مدیر
+// ورود مدیر
 export interface AdminLoginData {
   username: string;
   password: string;
@@ -52,13 +52,55 @@ export interface AdminLoginResponse {
   username: string;
 }
 
+// اطلاعات حساب مشتری
+export interface Customer {
+  id: number;
+  first_name: string;
+  last_name: string;
+  phone: string;
+}
+
+// اطلاعات ویرایش حساب مشتری
+export interface CustomerProfileUpdateData {
+  first_name: string;
+  last_name: string;
+  phone: string;
+}
+
+// پاسخ ویرایش حساب مشتری
+export interface CustomerProfileUpdateResponse {
+  message: string;
+  customer: Customer;
+}
+
+// اطلاعات ثبت‌نام مشتری
+export interface CustomerRegisterData {
+  first_name: string;
+  last_name: string;
+  phone: string;
+  password: string;
+  password_confirm: string;
+}
+
+// اطلاعات ورود مشتری
+export interface CustomerLoginData {
+  phone: string;
+  password: string;
+}
+
+// پاسخ عملیات حساب مشتری
+export interface CustomerAuthResponse {
+  message: string;
+  customer: Customer;
+}
+
 // اطلاعات یک محصول در سفارش
 export interface CreateOrderItemData {
   product_id: number;
   quantity: number;
 }
 
-// اطلاعات موردنیاز برای ثبت سفارش
+// اطلاعات ثبت سفارش
 export interface CreateOrderData {
   full_name: string;
   phone: string;
@@ -123,12 +165,9 @@ export interface BestSellingViscosityReport {
 
 // دریافت توکن CSRF
 async function getCsrfToken(): Promise<string> {
-  const response = await fetch(
-    `${API_BASE_URL}/auth/csrf/`,
-    {
-      credentials: "include",
-    }
-  );
+  const response = await fetch(`${API_BASE_URL}/auth/csrf/`, {
+    credentials: "include",
+  });
 
   if (!response.ok) {
     throw new Error("دریافت توکن امنیتی با خطا مواجه شد.");
@@ -151,24 +190,145 @@ export async function adminLogin(
 ): Promise<AdminLoginResponse> {
   const csrfToken = await getCsrfToken();
 
-  const response = await fetch(
-    `${API_BASE_URL}/auth/login/`,
-    {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRFToken": csrfToken,
-      },
-      body: JSON.stringify(loginData),
-    }
-  );
+  const response = await fetch(`${API_BASE_URL}/auth/login/`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": csrfToken,
+    },
+    body: JSON.stringify(loginData),
+  });
 
   const result = await response.json();
 
   if (!response.ok) {
+    throw new Error(result.error || "ورود مدیر با خطا مواجه شد.");
+  }
+
+  return result;
+}
+
+// ثبت‌نام مشتری
+export async function customerRegister(
+  registerData: CustomerRegisterData
+): Promise<CustomerAuthResponse> {
+  const csrfToken = await getCsrfToken();
+
+  const response = await fetch(`${API_BASE_URL}/auth/register/`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": csrfToken,
+    },
+    body: JSON.stringify(registerData),
+  });
+
+  const result = await response.json().catch(() => null);
+
+  if (!response.ok) {
     throw new Error(
-      result.error || "ورود مدیر با خطا مواجه شد."
+      result
+        ? JSON.stringify(result)
+        : "ثبت‌نام با خطا مواجه شد."
+    );
+  }
+
+  return result;
+}
+
+// ورود مشتری
+export async function customerLogin(
+  loginData: CustomerLoginData
+): Promise<CustomerAuthResponse> {
+  const csrfToken = await getCsrfToken();
+
+  const response = await fetch(`${API_BASE_URL}/auth/customer-login/`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": csrfToken,
+    },
+    body: JSON.stringify(loginData),
+  });
+
+  const result = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(
+      result?.error || "ورود به حساب کاربری با خطا مواجه شد."
+    );
+  }
+
+  return result;
+}
+
+// خروج مشتری
+export async function customerLogout(): Promise<{ message: string }> {
+  const csrfToken = await getCsrfToken();
+
+  const response = await fetch(`${API_BASE_URL}/auth/customer-logout/`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "X-CSRFToken": csrfToken,
+    },
+  });
+
+  const result = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(
+      result?.error || "خروج از حساب با خطا مواجه شد."
+    );
+  }
+
+  return result;
+}
+
+// دریافت اطلاعات مشتری واردشده
+export async function getCurrentCustomer(): Promise<Customer> {
+  const response = await fetch(`${API_BASE_URL}/auth/me/`, {
+    credentials: "include",
+    cache: "no-store",
+  });
+
+  const result = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(
+      result?.error || "دریافت اطلاعات حساب کاربری با خطا مواجه شد."
+    );
+  }
+
+  return result;
+}
+
+// ویرایش اطلاعات حساب مشتری
+export async function updateCurrentCustomer(
+  customerData: CustomerProfileUpdateData
+): Promise<CustomerProfileUpdateResponse> {
+  const csrfToken = await getCsrfToken();
+
+  const response = await fetch(`${API_BASE_URL}/auth/me/`, {
+    method: "PUT",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": csrfToken,
+    },
+    body: JSON.stringify(customerData),
+  });
+
+  const result = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(
+      result
+        ? JSON.stringify(result)
+        : "ویرایش اطلاعات حساب با خطا مواجه شد."
     );
   }
 
@@ -177,9 +337,7 @@ export async function adminLogin(
 
 // دریافت دسته‌بندی‌ها
 export async function getCategories(): Promise<ApiCategory[]> {
-  const response = await fetch(
-    `${API_BASE_URL}/categories/`
-  );
+  const response = await fetch(`${API_BASE_URL}/categories/`);
 
   if (!response.ok) {
     throw new Error("دریافت دسته‌بندی‌ها با خطا مواجه شد.");
@@ -190,9 +348,7 @@ export async function getCategories(): Promise<ApiCategory[]> {
 
 // دریافت محصولات فعال فروشگاه
 export async function getProducts(): Promise<ApiProduct[]> {
-  const response = await fetch(
-    `${API_BASE_URL}/products/`
-  );
+  const response = await fetch(`${API_BASE_URL}/products/`);
 
   if (!response.ok) {
     throw new Error("دریافت محصولات با خطا مواجه شد.");
@@ -201,15 +357,12 @@ export async function getProducts(): Promise<ApiProduct[]> {
   return response.json();
 }
 
-// دریافت تمام محصولات (فعال و غیرفعال) برای مدیر
+// دریافت تمام محصولات برای مدیر
 export async function getAdminProducts(): Promise<ApiProduct[]> {
-  const response = await fetch(
-    `${API_BASE_URL}/products/admin/all/`,
-    {
-      credentials: "include",
-      cache: "no-store",
-    }
-  );
+  const response = await fetch(`${API_BASE_URL}/products/admin/all/`, {
+    credentials: "include",
+    cache: "no-store",
+  });
 
   if (!response.ok) {
     throw new Error("دریافت تمام محصولات با خطا مواجه شد.");
@@ -222,9 +375,7 @@ export async function getAdminProducts(): Promise<ApiProduct[]> {
 export async function getProductBySlug(
   slug: string
 ): Promise<ApiProduct> {
-  const response = await fetch(
-    `${API_BASE_URL}/products/${slug}/`
-  );
+  const response = await fetch(`${API_BASE_URL}/products/${slug}/`);
 
   if (!response.ok) {
     throw new Error("دریافت اطلاعات محصول با خطا مواجه شد.");
@@ -239,18 +390,15 @@ export async function createProduct(
 ): Promise<ApiProduct> {
   const csrfToken = await getCsrfToken();
 
-  const response = await fetch(
-    `${API_BASE_URL}/products/create/`,
-    {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRFToken": csrfToken,
-      },
-      body: JSON.stringify(productData),
-    }
-  );
+  const response = await fetch(`${API_BASE_URL}/products/create/`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": csrfToken,
+    },
+    body: JSON.stringify(productData),
+  });
 
   const errorData = await response.json().catch(() => null);
 
@@ -304,18 +452,15 @@ export async function createOrder(
 ): Promise<CreateOrderResponse> {
   const csrfToken = await getCsrfToken();
 
-  const response = await fetch(
-    `${API_BASE_URL}/orders/create/`,
-    {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRFToken": csrfToken,
-      },
-      body: JSON.stringify(orderData),
-    }
-  );
+  const response = await fetch(`${API_BASE_URL}/orders/create/`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": csrfToken,
+    },
+    body: JSON.stringify(orderData),
+  });
 
   const result = await response.json().catch(() => null);
 
@@ -364,10 +509,9 @@ export async function uploadOrderReceipt(
 
 // دریافت گزارش موجودی انبار
 export async function getInventoryReport(): Promise<InventoryReport> {
-  const response = await fetch(
-    `${API_BASE_URL}/inventory/report/`,
-    { cache: "no-store" }
-  );
+  const response = await fetch(`${API_BASE_URL}/inventory/report/`, {
+    cache: "no-store",
+  });
 
   if (!response.ok) {
     throw new Error("دریافت گزارش موجودی انبار با خطا مواجه شد.");

@@ -12,6 +12,10 @@ env/
 .env.*
 !.env.example
 
+# Uploaded media and customer files
+backend/app/media/
+media/
+
 # Next.js
 node_modules/
 .next/
