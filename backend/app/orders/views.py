@@ -1,5 +1,5 @@
 from rest_framework import generics, serializers, status
-from rest_framework.permissions import AllowAny, IsAdminUser
+from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -25,6 +25,19 @@ class AdminOrderListView(generics.ListAPIView):
     )
     serializer_class = OrderSerializer
     permission_classes = [IsAdminUser]
+
+
+# مشاهده سفارش‌های مشتری واردشده
+class CustomerOrderListView(generics.ListAPIView):
+    serializer_class = OrderSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Order.objects.filter(
+            user=self.request.user
+        ).prefetch_related(
+            "items__product"
+        ).order_by("-created_at")
 
 
 # اعتبارسنجی اطلاعات فیش واریزی

@@ -3,19 +3,30 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+
 import {
   Customer,
   getCurrentCustomer,
   customerLogout,
+  updateCurrentCustomer,
 } from "../../../lib/api";
 
 export default function ProfilePage() {
   const router = useRouter();
 
   const [customer, setCustomer] = useState<Customer | null>(null);
+
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [phone, setPhone] = useState("");
+
   const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -26,6 +37,9 @@ export default function ProfilePage() {
 
         if (active) {
           setCustomer(result);
+          setFirstName(result.first_name);
+          setLastName(result.last_name);
+          setPhone(result.phone);
         }
       } catch (err) {
         if (active) {
@@ -49,6 +63,68 @@ export default function ProfilePage() {
     };
   }, []);
 
+  function handleEdit() {
+    if (!customer) return;
+
+    setFirstName(customer.first_name);
+    setLastName(customer.last_name);
+    setPhone(customer.phone);
+
+    setEditing(true);
+    setError("");
+    setSuccess("");
+  }
+
+  function handleCancel() {
+    if (!customer) return;
+
+    setFirstName(customer.first_name);
+    setLastName(customer.last_name);
+    setPhone(customer.phone);
+
+    setEditing(false);
+    setError("");
+    setSuccess("");
+  }
+
+  async function handleSave(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!firstName.trim() || !lastName.trim() || !phone.trim()) {
+      setError("لطفاً تمام فیلدها را تکمیل کنید.");
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const result = await updateCurrentCustomer({
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        phone: phone.trim(),
+      });
+
+      setCustomer(result.customer);
+
+      setFirstName(result.customer.first_name);
+      setLastName(result.customer.last_name);
+      setPhone(result.customer.phone);
+
+      setEditing(false);
+      setSuccess("اطلاعات حساب شما با موفقیت ویرایش شد.");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "ویرایش اطلاعات با خطا مواجه شد."
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function handleLogout() {
     setLoggingOut(true);
     setError("");
@@ -62,12 +138,13 @@ export default function ProfilePage() {
           ? err.message
           : "خروج از حساب با خطا مواجه شد."
       );
+
       setLoggingOut(false);
     }
   }
 
   const inputClass =
-    "w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700";
+    "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100";
 
   if (loading) {
     return (
@@ -121,6 +198,7 @@ export default function ProfilePage() {
     >
       <div className="mx-auto max-w-4xl">
 
+        {/* سربرگ */}
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <div>
             <Link
@@ -135,7 +213,7 @@ export default function ProfilePage() {
             </h1>
 
             <p className="mt-2 text-sm text-slate-500">
-              اطلاعات حساب خود را مشاهده کنید.
+              اطلاعات حساب خود را مدیریت کنید.
             </p>
           </div>
 
@@ -149,6 +227,7 @@ export default function ProfilePage() {
 
         <div className="grid gap-6 md:grid-cols-3">
 
+          {/* کارت اطلاعات مشتری */}
           <aside className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
 
             <div className="flex flex-col items-center text-center">
@@ -167,7 +246,14 @@ export default function ProfilePage() {
 
             </div>
 
-            <div className="mt-7 border-t border-slate-100 pt-5">
+            <div className="mt-7 border-t border-slate-100 pt-5 space-y-3">
+
+              <Link
+                href="/account/orders"
+                className="block w-full rounded-xl bg-orange-50 py-3 text-center text-sm font-bold text-orange-700 transition hover:bg-orange-100"
+              >
+                مشاهده سفارش‌های من
+              </Link>
 
               <button
                 onClick={handleLogout}
@@ -183,22 +269,46 @@ export default function ProfilePage() {
 
           </aside>
 
+          {/* اطلاعات شخصی */}
           <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm md:col-span-2">
 
-            <h2 className="border-b border-slate-100 pb-5 text-lg font-bold text-slate-800">
-              اطلاعات شخصی
-            </h2>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-5">
 
-            <div className="mt-6 space-y-5">
+              <h2 className="text-lg font-bold text-slate-800">
+                اطلاعات شخصی
+              </h2>
+
+              {!editing && (
+                <button
+                  onClick={handleEdit}
+                  className="rounded-xl bg-orange-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-orange-700"
+                >
+                  ویرایش اطلاعات
+                </button>
+              )}
+
+            </div>
+
+            <form
+              onSubmit={handleSave}
+              className="mt-6 space-y-5"
+            >
 
               <div>
                 <label className="mb-2 block text-sm font-medium text-slate-600">
                   نام
                 </label>
 
-                <div className={inputClass}>
-                  {customer.first_name}
-                </div>
+                <input
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  readOnly={!editing}
+                  className={`${inputClass} ${
+                    !editing ? "bg-slate-50" : ""
+                  }`}
+                  required
+                />
               </div>
 
               <div>
@@ -206,9 +316,16 @@ export default function ProfilePage() {
                   نام خانوادگی
                 </label>
 
-                <div className={inputClass}>
-                  {customer.last_name}
-                </div>
+                <input
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  readOnly={!editing}
+                  className={`${inputClass} ${
+                    !editing ? "bg-slate-50" : ""
+                  }`}
+                  required
+                />
               </div>
 
               <div>
@@ -216,33 +333,71 @@ export default function ProfilePage() {
                   شماره تلفن
                 </label>
 
-                <div
-                  className={inputClass + " text-left"}
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  readOnly={!editing}
                   dir="ltr"
-                >
-                  {customer.phone}
-                </div>
+                  className={`${inputClass} text-left ${
+                    !editing ? "bg-slate-50" : ""
+                  }`}
+                  required
+                />
               </div>
 
-            </div>
+              {editing && (
+                <div className="flex flex-wrap gap-3 pt-3">
 
-            <div className="mt-8 rounded-xl bg-orange-50 p-4">
-              <p className="text-sm leading-7 text-orange-800">
-                حساب کاربری شما با موفقیت ایجاد شده است.
-                امکانات ویرایش اطلاعات و مشاهده سفارش‌ها
-                در مراحل بعدی به این بخش اضافه می‌شوند.
-              </p>
-            </div>
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="rounded-xl bg-orange-600 px-6 py-3 text-sm font-bold text-white transition hover:bg-orange-700 disabled:opacity-50"
+                  >
+                    {saving
+                      ? "در حال ذخیره..."
+                      : "ذخیره تغییرات"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleCancel}
+                    disabled={saving}
+                    className="rounded-xl border border-slate-200 px-6 py-3 text-sm font-bold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    انصراف
+                  </button>
+
+                </div>
+              )}
+
+            </form>
+
+            {success && (
+              <div className="mt-6 rounded-xl bg-green-50 p-4 text-sm leading-7 text-green-700">
+                {success}
+              </div>
+            )}
+
+            {error && (
+              <div className="mt-6 rounded-xl bg-red-50 p-4 text-sm leading-7 text-red-600">
+                {error}
+              </div>
+            )}
+
+            {!editing && (
+              <div className="mt-8 rounded-xl bg-orange-50 p-4">
+                <p className="text-sm leading-7 text-orange-800">
+                  اطلاعات حساب کاربری شما در فروشگاه Oilino
+                  ثبت شده است. برای تغییر اطلاعات، روی دکمه
+                  ویرایش اطلاعات کلیک کنید.
+                </p>
+              </div>
+            )}
 
           </section>
 
         </div>
-
-        {error && (
-          <div className="mt-6 rounded-xl bg-red-50 p-4 text-sm text-red-600">
-            {error}
-          </div>
-        )}
 
       </div>
     </main>

@@ -2,6 +2,7 @@ from django.urls import path
 from .views import (
     OrderCreateView,
     AdminOrderListView,
+    CustomerOrderListView,
     OrderReceiptUploadView,
     AdminPaymentReviewView,
 )
@@ -19,6 +20,13 @@ urlpatterns = [
         'orders/admin/all/',
         AdminOrderListView.as_view(),
         name='admin-order-list'
+    ),
+
+    # مشاهده سفارش‌های مشتری واردشده
+    path(
+        'orders/my-orders/',
+        CustomerOrderListView.as_view(),
+        name='customer-order-list'
     ),
 
     # بارگذاری فیش واریزی توسط مشتری

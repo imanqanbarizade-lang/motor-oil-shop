@@ -110,6 +110,12 @@ class OrderSerializer(serializers.ModelSerializer):
             for item in items_data
         )
 
+        # اتصال سفارش به حساب مشتری در صورت ورود
+        request = self.context.get("request")
+
+        if request and request.user.is_authenticated:
+            validated_data["user"] = request.user
+
         order = Order.objects.create(
             total_amount=total_amount,
             **validated_data

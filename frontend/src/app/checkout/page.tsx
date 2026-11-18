@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -27,7 +27,13 @@ export default function CheckoutPage() {
     "w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-gray-800 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100";
 
   const hasInvalidProduct = cartItems.some(
-    (item) => !Number.isInteger(item.productId) || item.productId <= 0
+    (item) =>
+      !Number.isInteger(item.productId) ||
+      item.productId <= 0 ||
+      !Number.isFinite(item.price) ||
+      item.price <= 0 ||
+      !Number.isInteger(item.quantity) ||
+      item.quantity <= 0
   );
 
   const handleChange = (
@@ -45,15 +51,15 @@ export default function CheckoutPage() {
     event.preventDefault();
     setError("");
 
-    if (hasInvalidProduct) {
-      setError(
-        "اطلاعات بعضی محصولات قدیمی است. لطفاً محصولات را از سبد خرید حذف کنید و دوباره از فروشگاه اضافه کنید."
-      );
+    if (cartItems.length === 0) {
+      setError("سبد خرید شما خالی است.");
       return;
     }
 
-    if (cartItems.length === 0) {
-      setError("سبد خرید شما خالی است.");
+    if (hasInvalidProduct) {
+      setError(
+        "اطلاعات یا قیمت بعضی محصولات معتبر نیست. لطفاً آن‌ها را از سبد خرید حذف کنید و دوباره از فروشگاه اضافه کنید."
+      );
       return;
     }
 
@@ -83,10 +89,11 @@ export default function CheckoutPage() {
       clearCart();
 
       router.push(
-        `/checkout/success?order=${result.id}&amount=${result.total_amount}`
+        "/checkout/success?order=" + result.id + "&amount=" + result.total_amount
       );
     } catch (err) {
       console.error("خطا در ثبت سفارش:", err);
+
       setError(
         err instanceof Error
           ? err.message
@@ -156,6 +163,7 @@ export default function CheckoutPage() {
                     <label className="mb-2 block text-sm font-bold">
                       نام و نام خانوادگی *
                     </label>
+
                     <input
                       required
                       name="full_name"
@@ -170,6 +178,7 @@ export default function CheckoutPage() {
                     <label className="mb-2 block text-sm font-bold">
                       شماره تماس *
                     </label>
+
                     <input
                       required
                       type="tel"
@@ -185,6 +194,7 @@ export default function CheckoutPage() {
                     <label className="mb-2 block text-sm font-bold">
                       استان *
                     </label>
+
                     <input
                       required
                       name="province"
@@ -199,6 +209,7 @@ export default function CheckoutPage() {
                     <label className="mb-2 block text-sm font-bold">
                       شهر *
                     </label>
+
                     <input
                       required
                       name="city"
@@ -213,6 +224,7 @@ export default function CheckoutPage() {
                     <label className="mb-2 block text-sm font-bold">
                       آدرس کامل *
                     </label>
+
                     <textarea
                       required
                       rows={4}
@@ -228,6 +240,7 @@ export default function CheckoutPage() {
                     <label className="mb-2 block text-sm font-bold">
                       کد پستی
                     </label>
+
                     <input
                       name="postal_code"
                       value={formData.postal_code}
@@ -241,6 +254,7 @@ export default function CheckoutPage() {
                     <label className="mb-2 block text-sm font-bold">
                       توضیحات سفارش
                     </label>
+
                     <input
                       name="description"
                       value={formData.description}
@@ -253,7 +267,7 @@ export default function CheckoutPage() {
 
                 {hasInvalidProduct && (
                   <p className="mt-5 rounded-xl bg-orange-50 p-4 text-sm leading-7 text-orange-700">
-                    محصولات موجود در سبد خرید از نسخه قبلی هستند. آن‌ها را از
+                    قیمت یا اطلاعات بعضی محصولات معتبر نیست. لطفاً آن‌ها را از
                     سبد خرید حذف کنید و دوباره از صفحه محصولات اضافه کنید.
                   </p>
                 )}
@@ -289,6 +303,7 @@ export default function CheckoutPage() {
                       <p className="text-sm font-bold text-slate-900">
                         {item.name}
                       </p>
+
                       <p className="mt-1 text-xs text-gray-500">
                         {item.viscosity} - {item.volume}
                       </p>
@@ -305,6 +320,7 @@ export default function CheckoutPage() {
                 <span className="text-sm text-gray-500">
                   تعداد کل محصولات
                 </span>
+
                 <span className="font-bold">{cartCount} عدد</span>
               </div>
 
@@ -323,3 +339,4 @@ export default function CheckoutPage() {
     </main>
   );
 }
+

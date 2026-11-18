@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 from django.core.validators import MinValueValidator
 from products.models import Product
@@ -20,6 +21,16 @@ class Order(models.Model):
         ("approved", "پرداخت تأیید شده"),
         ("rejected", "فیش پرداخت رد شده"),
     ]
+
+    # اتصال سفارش به حساب کاربری؛ برای سفارش مهمان خالی می‌ماند
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="orders",
+        verbose_name="حساب کاربری مشتری"
+    )
 
     full_name = models.CharField(
         max_length=150,

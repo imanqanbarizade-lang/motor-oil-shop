@@ -122,6 +122,34 @@ export interface CreateOrderResponse {
   created_at: string;
 }
 
+// اطلاعات محصولات داخل سفارش مشتری
+export interface CustomerOrderItem {
+  product_id: number;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+}
+
+// اطلاعات کامل سفارش مشتری
+export interface CustomerOrder {
+  id: number;
+  full_name: string;
+  phone: string;
+  province: string;
+  city: string;
+  address: string;
+  postal_code: string;
+  description: string;
+  order_items: CustomerOrderItem[];
+  total_amount: number;
+  status: string;
+  payment_status: string;
+  payment_receipt: string | null;
+  payment_submitted_at: string | null;
+  created_at: string;
+}
+
 // پاسخ ارسال فیش واریزی
 export interface UploadReceiptResponse {
   message: string;
@@ -473,6 +501,26 @@ export async function createOrder(
   }
 
   return result;
+}
+
+// دریافت سفارش‌های حساب مشتری
+export async function getMyOrders(): Promise<CustomerOrder[]> {
+  const response = await fetch(`${API_BASE_URL}/orders/my-orders/`, {
+    method: "GET",
+    credentials: "include",
+    cache: "no-store",
+  });
+
+  const result = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(
+      result?.detail || "دریافت سفارش‌های شما با خطا مواجه شد."
+    );
+  }
+
+  // پشتیبانی از پاسخ معمولی و پاسخ صفحه‌بندی‌شده
+  return Array.isArray(result) ? result : result?.results || [];
 }
 
 // ارسال فیش واریزی سفارش
