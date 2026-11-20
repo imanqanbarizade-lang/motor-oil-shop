@@ -9,6 +9,23 @@ import {
   type OrderResponse,
 } from "@/lib/orders";
 
+type OrderWithShipping = OrderResponse & {
+  shipping_cost?: number;
+};
+
+function getShippingCost(order: OrderResponse) {
+  return Number(
+    (order as OrderWithShipping).shipping_cost ?? 0
+  );
+}
+
+function getProductsTotal(order: OrderResponse) {
+  return (order.order_items ?? []).reduce(
+    (total, item) => total + item.total_price,
+    0
+  );
+}
+
 export default function OrdersPage() {
   const [orders, setOrders] = useState<OrderResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -138,7 +155,6 @@ export default function OrdersPage() {
   return (
     <main dir="rtl" className="min-h-screen bg-slate-100 text-slate-800">
       <div className="flex min-h-screen">
-
         <aside className="hidden w-64 shrink-0 flex-col bg-slate-950 p-6 text-white lg:flex">
           <div className="mb-12">
             <h1 className="text-3xl font-black">
@@ -189,7 +205,6 @@ export default function OrdersPage() {
         </aside>
 
         <section className="min-w-0 flex-1 p-5 md:p-8">
-
           <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="mb-2 text-sm text-slate-500">
@@ -256,7 +271,6 @@ export default function OrdersPage() {
           {!loading && !error && (
             <>
               <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
-
                 <div className="border-b border-slate-100 p-6">
                   <h3 className="text-lg font-black text-slate-900">
                     فهرست سفارش‌ها
@@ -281,14 +295,14 @@ export default function OrdersPage() {
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full min-w-[1050px] text-right text-sm">
-
+                    <table className="w-full min-w-[1200px] text-right text-sm">
                       <thead className="bg-slate-50 text-slate-500">
                         <tr>
                           <th className="px-6 py-4">شماره سفارش</th>
                           <th className="px-6 py-4">نام مشتری</th>
                           <th className="px-6 py-4">شماره تماس</th>
-                          <th className="px-6 py-4">مبلغ سفارش</th>
+                          <th className="px-6 py-4">هزینه ارسال</th>
+                          <th className="px-6 py-4">مبلغ نهایی</th>
                           <th className="px-6 py-4">تاریخ ثبت</th>
                           <th className="px-6 py-4">وضعیت سفارش</th>
                           <th className="px-6 py-4">وضعیت پرداخت</th>
@@ -324,6 +338,10 @@ export default function OrdersPage() {
                               {order.phone}
                             </td>
 
+                            <td className="px-6 py-5 whitespace-nowrap text-slate-600">
+                              {formatPrice(getShippingCost(order))}
+                            </td>
+
                             <td className="px-6 py-5 font-bold">
                               {formatPrice(order.total_amount)}
                             </td>
@@ -357,7 +375,6 @@ export default function OrdersPage() {
                           </tr>
                         ))}
                       </tbody>
-
                     </table>
                   </div>
                 )}
@@ -365,7 +382,6 @@ export default function OrdersPage() {
 
               {selectedOrder && (
                 <div className="mt-8 rounded-2xl bg-white p-6 shadow-sm">
-
                   <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-5">
                     <div>
                       <p className="text-sm text-slate-500">
@@ -499,14 +515,42 @@ export default function OrdersPage() {
                   )}
 
                   <div className="mt-6 flex justify-end">
-                    <div className="rounded-xl bg-orange-50 px-6 py-4">
-                      <p className="text-sm text-slate-500">
-                        مبلغ کل سفارش
-                      </p>
+                    <div className="w-full max-w-md rounded-xl bg-orange-50 p-5">
+                      <h4 className="mb-4 font-black text-slate-800">
+                        خلاصه مالی سفارش
+                      </h4>
 
-                      <p className="mt-2 text-xl font-black text-orange-600">
-                        {formatPrice(selectedOrder.total_amount)}
-                      </p>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between gap-3 text-sm">
+                          <span className="text-slate-600">
+                            مبلغ محصولات
+                          </span>
+
+                          <span className="font-bold text-slate-700">
+                            {formatPrice(getProductsTotal(selectedOrder))}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-3 text-sm">
+                          <span className="text-slate-600">
+                            هزینه ارسال با پست
+                          </span>
+
+                          <span className="font-bold text-slate-700">
+                            {formatPrice(getShippingCost(selectedOrder))}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-3 border-t border-orange-200 pt-3">
+                          <span className="font-black text-slate-800">
+                            مبلغ نهایی سفارش
+                          </span>
+
+                          <span className="text-xl font-black text-orange-600">
+                            {formatPrice(selectedOrder.total_amount)}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -522,7 +566,6 @@ export default function OrdersPage() {
                     </div>
                   )}
 
-                  {/* بخش بررسی پرداخت */}
                   <div className="mt-8 rounded-2xl border border-slate-200 p-5">
                     <h4 className="mb-4 font-black text-slate-800">
                       بررسی پرداخت
@@ -633,7 +676,6 @@ export default function OrdersPage() {
           <footer className="mt-8 text-center text-xs text-slate-400">
             Oilino Dashboard — مدیریت سفارش‌ها
           </footer>
-
         </section>
       </div>
     </main>

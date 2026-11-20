@@ -18,6 +18,9 @@ export default function CreateProductPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+
   const [formData, setFormData] = useState({
     category_id: "",
     name: "",
@@ -46,6 +49,20 @@ export default function CreateProductPage() {
     loadCategories();
   }, []);
 
+  useEffect(() => {
+    if (!selectedImage) {
+      setImagePreview(null);
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(selectedImage);
+    setImagePreview(objectUrl);
+
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [selectedImage]);
+
   function handleChange(
     event: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
@@ -57,6 +74,47 @@ export default function CreateProductPage() {
       ...previous,
       [name]: value,
     }));
+  }
+
+  function handleImageChange(
+    event: React.ChangeEvent<HTMLInputElement>
+  ) {
+    const file = event.target.files?.[0];
+
+    setError("");
+
+    if (!file) {
+      setSelectedImage(null);
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setError("لطفاً یک فایل تصویری معتبر انتخاب کنید.");
+      event.target.value = "";
+      setSelectedImage(null);
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError("حجم تصویر نباید بیشتر از ۵ مگابایت باشد.");
+      event.target.value = "";
+      setSelectedImage(null);
+      return;
+    }
+
+    setSelectedImage(file);
+  }
+
+  function removeImage() {
+    setSelectedImage(null);
+
+    const fileInput = document.getElementById(
+      "product-image"
+    ) as HTMLInputElement | null;
+
+    if (fileInput) {
+      fileInput.value = "";
+    }
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -78,6 +136,7 @@ export default function CreateProductPage() {
         price: Number(formData.price),
         stock: Number(formData.stock),
         is_available: formData.is_available,
+        image: selectedImage,
       };
 
       await createProduct(productData);
@@ -103,7 +162,6 @@ export default function CreateProductPage() {
 
   return (
     <main dir="rtl" className="space-y-6">
-
       <div>
         <h1 className="text-2xl font-bold text-slate-800">
           افزودن محصول جدید
@@ -119,7 +177,6 @@ export default function CreateProductPage() {
         className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm"
       >
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-
           <div>
             <label className="mb-2 block text-sm font-medium text-slate-700">
               دسته‌بندی محصول
@@ -274,6 +331,71 @@ export default function CreateProductPage() {
             />
           </div>
 
+          {/* بخش انتخاب تصویر محصول */}
+          <div className="md:col-span-2">
+            <label className="mb-3 block text-sm font-medium text-slate-700">
+              تصویر محصول
+            </label>
+
+            <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 p-5">
+              <input
+                id="product-image"
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="hidden"
+              />
+
+              {!imagePreview ? (
+                <label
+                  htmlFor="product-image"
+                  className="flex cursor-pointer flex-col items-center justify-center gap-3 py-6 text-center"
+                >
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-orange-100 text-2xl text-orange-600">
+                    +
+                  </div>
+
+                  <span className="font-medium text-slate-700">
+                    برای انتخاب تصویر کلیک کنید
+                  </span>
+
+                  <span className="text-xs text-slate-400">
+                    فرمت‌های تصویری مجاز - حداکثر حجم ۵ مگابایت
+                  </span>
+                </label>
+              ) : (
+                <div className="flex flex-col items-center gap-4">
+                  <img
+                    src={imagePreview}
+                    alt="پیش‌نمایش تصویر محصول"
+                    className="max-h-64 max-w-full rounded-xl object-contain shadow-sm"
+                  />
+
+                  <p className="text-sm text-slate-600">
+                    {selectedImage?.name}
+                  </p>
+
+                  <div className="flex flex-wrap justify-center gap-3">
+                    <label
+                      htmlFor="product-image"
+                      className="cursor-pointer rounded-xl border border-slate-200 bg-white px-5 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                    >
+                      تغییر تصویر
+                    </label>
+
+                    <button
+                      type="button"
+                      onClick={removeImage}
+                      className="rounded-xl border border-red-200 bg-red-50 px-5 py-2 text-sm font-medium text-red-600 transition hover:bg-red-100"
+                    >
+                      حذف تصویر
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="md:col-span-2">
             <label className="flex cursor-pointer items-center gap-3">
               <input
@@ -293,7 +415,6 @@ export default function CreateProductPage() {
               </span>
             </label>
           </div>
-
         </div>
 
         {error && (
@@ -309,7 +430,6 @@ export default function CreateProductPage() {
         )}
 
         <div className="mt-8 flex flex-wrap gap-3">
-
           <button
             type="submit"
             disabled={loading || loadingCategories}
@@ -325,7 +445,6 @@ export default function CreateProductPage() {
           >
             انصراف
           </button>
-
         </div>
       </form>
     </main>

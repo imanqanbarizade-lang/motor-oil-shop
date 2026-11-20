@@ -4,10 +4,10 @@ import { useEffect, useState, FormEvent } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   getCategories,
-  getProducts,
+  getAdminProducts,
   updateProduct,
   type ApiCategory,
-  type CreateProductData,
+  type UpdateProductData,
 } from "@/lib/api";
 
 export default function EditProductPage() {
@@ -21,6 +21,11 @@ export default function EditProductPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  const [currentImage, setCurrentImage] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [removeImage, setRemoveImage] = useState(false);
 
   const [formData, setFormData] = useState({
     category_id: "",
@@ -40,7 +45,7 @@ export default function EditProductPage() {
       try {
         const [categoriesData, productsData] = await Promise.all([
           getCategories(),
-          getProducts(),
+          getAdminProducts(),
         ]);
 
         setCategories(categoriesData);
@@ -66,8 +71,14 @@ export default function EditProductPage() {
           stock: product.stock.toString(),
           is_available: product.is_available,
         });
-      } catch {
-        setError("دریافت اطلاعات محصول با خطا مواجه شد.");
+
+        setCurrentImage(product.image);
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "دریافت اطلاعات محصول با خطا مواجه شد."
+        );
       } finally {
         setLoading(false);
       }
@@ -94,15 +105,57 @@ export default function EditProductPage() {
     }));
   }
 
+  function handleImageChange(
+    event: React.ChangeEvent<HTMLInputElement>
+  ) {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setError("لطفاً یک فایل تصویری معتبر انتخاب کنید.");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError("حجم تصویر نباید بیشتر از ۵ مگابایت باشد.");
+      event.target.value = "";
+      return;
+    }
+
+    setError("");
+    setSelectedImage(file);
+    setImagePreview(URL.createObjectURL(file));
+    setRemoveImage(false);
+  }
+
+  function handleRemoveImage() {
+    setSelectedImage(null);
+    setImagePreview(null);
+    setRemoveImage(true);
+  }
+
+  function handleCancelSelectedImage() {
+    setSelectedImage(null);
+    setImagePreview(null);
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     setError("");
     setSuccess("");
+
+    if (!formData.category_id) {
+      setError("لطفاً دسته‌بندی محصول را انتخاب کنید.");
+      return;
+    }
+
     setSaving(true);
 
     try {
-      const productData: CreateProductData = {
+      const productData: UpdateProductData = {
         category_id: Number(formData.category_id),
         name: formData.name,
         brand: formData.brand,
@@ -113,6 +166,8 @@ export default function EditProductPage() {
         price: Number(formData.price),
         stock: Number(formData.stock),
         is_available: formData.is_available,
+        image: selectedImage,
+        remove_image: removeImage,
       };
 
       await updateProduct(productId, productData);
@@ -136,6 +191,12 @@ export default function EditProductPage() {
   const inputClass =
     "w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100";
 
+  const displayedImage = selectedImage
+    ? imagePreview
+    : removeImage
+      ? null
+      : currentImage;
+
   if (loading) {
     return (
       <main dir="rtl" className="p-8 text-center text-slate-500">
@@ -146,7 +207,6 @@ export default function EditProductPage() {
 
   return (
     <main dir="rtl" className="space-y-6">
-
       <div>
         <h1 className="text-2xl font-bold text-slate-800">
           ویرایش محصول
@@ -302,6 +362,78 @@ export default function EditProductPage() {
               rows={4}
               className={inputClass}
             />
+          </div>
+
+          {/* مدیریت تصویر محصول */}
+          <div className="md:col-span-2">
+            <label className="mb-3 block text-sm font-medium text-slate-700">
+              تصویر محصول
+            </label>
+
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5">
+
+              {displayedImage ? (
+                <div className="mb-5">
+                  <div className="relative flex h-64 items-center justify-center overflow-hidden rounded-xl bg-white">
+                    <img
+                      src={displayedImage}
+                      alt="پیش‌نمایش تصویر محصول"
+                      className="h-full w-full object-contain p-3"
+                    />
+                  </div>
+
+                  <p className="mt-2 text-center text-xs text-slate-500">
+                    {selectedImage
+                      ? "پیش‌نمایش تصویر جدید"
+                      : "تصویر فعلی محصول"}
+                  </p>
+                </div>
+              ) : (
+                <div className="mb-5 flex h-48 flex-col items-center justify-center rounded-xl bg-white text-slate-400">
+                  <span className="text-5xl">🛢️</span>
+                  <p className="mt-3 text-sm">
+                    تصویری برای این محصول انتخاب نشده است.
+                  </p>
+                </div>
+              )}
+
+              <div className="flex flex-wrap gap-3">
+                <label className="cursor-pointer rounded-xl bg-orange-500 px-5 py-3 text-sm font-bold text-white transition hover:bg-orange-600">
+                  انتخاب تصویر جدید
+
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+                </label>
+
+                {selectedImage && (
+                  <button
+                    type="button"
+                    onClick={handleCancelSelectedImage}
+                    className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
+                  >
+                    لغو انتخاب تصویر جدید
+                  </button>
+                )}
+
+                {(currentImage || selectedImage) && !removeImage && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveImage}
+                    className="rounded-xl border border-red-200 px-5 py-3 text-sm font-medium text-red-600 transition hover:bg-red-50"
+                  >
+                    حذف تصویر
+                  </button>
+                )}
+              </div>
+
+              <p className="mt-4 text-xs text-slate-500">
+                فرمت تصویر باید معتبر باشد و حجم آن حداکثر ۵ مگابایت باشد.
+              </p>
+            </div>
           </div>
 
           <div className="md:col-span-2">

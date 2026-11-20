@@ -1,10 +1,12 @@
 from django.urls import path
+
 from .views import (
     OrderCreateView,
     AdminOrderListView,
     CustomerOrderListView,
     OrderReceiptUploadView,
     AdminPaymentReviewView,
+    CustomerOrderInvoiceView,
 )
 
 urlpatterns = [
@@ -27,6 +29,13 @@ urlpatterns = [
         'orders/my-orders/',
         CustomerOrderListView.as_view(),
         name='customer-order-list'
+    ),
+
+    # دریافت فاکتور سفارش توسط مشتری
+    path(
+        'orders/<int:order_id>/invoice/',
+        CustomerOrderInvoiceView.as_view(),
+        name='customer-order-invoice'
     ),
 
     # بارگذاری فیش واریزی توسط مشتری

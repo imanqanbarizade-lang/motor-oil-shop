@@ -22,7 +22,6 @@ class Order(models.Model):
         ("rejected", "فیش پرداخت رد شده"),
     ]
 
-    # اتصال سفارش به حساب کاربری؛ برای سفارش مهمان خالی می‌ماند
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -65,6 +64,11 @@ class Order(models.Model):
     description = models.TextField(
         blank=True,
         verbose_name="توضیحات سفارش"
+    )
+
+    shipping_cost = models.PositiveBigIntegerField(
+        default=0,
+        verbose_name="هزینه ارسال"
     )
 
     total_amount = models.PositiveBigIntegerField(

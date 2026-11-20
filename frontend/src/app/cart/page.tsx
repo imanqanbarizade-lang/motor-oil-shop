@@ -4,6 +4,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { useCart } from "../../context/CartContext";
 
+const SHIPPING_COST = 200000;
+
 export default function CartPage() {
   const {
     cartItems,
@@ -17,20 +19,19 @@ export default function CartPage() {
   const formatPrice = (price: number) =>
     new Intl.NumberFormat("fa-IR").format(price);
 
-  const totalPrice = cartItems.reduce(
+  const productsTotal = cartItems.reduce(
     (total, product) => total + product.price * product.quantity,
     0
   );
+
+  const finalTotal = productsTotal + SHIPPING_COST;
 
   const hasUnpricedProducts = cartItems.some(
     (product) => product.price <= 0
   );
 
   return (
-    <main
-      className="min-h-screen bg-gray-50 text-gray-800"
-      dir="rtl"
-    >
+    <main className="min-h-screen bg-gray-50 text-gray-800" dir="rtl">
       <header className="border-b border-gray-100 bg-white shadow-sm">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5">
           <Link href="/" className="text-2xl font-extrabold text-slate-900">
@@ -214,9 +215,47 @@ export default function CartPage() {
                 </span>
               </div>
 
+              <div className="mt-5 rounded-xl border border-orange-100 bg-orange-50 p-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">📦</span>
+
+                  <div>
+                    <p className="font-bold text-slate-900">
+                      ارسال سفارش با پست
+                    </p>
+
+                    <p className="mt-1 text-sm text-gray-600">
+                      سفارش شما توسط پست ارسال می‌شود.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 space-y-4 border-b border-gray-100 pb-5">
+                <div>
+                  <p className="text-sm text-gray-500">
+                    مبلغ محصولات
+                  </p>
+
+                  <p className="mt-2 font-bold text-slate-900">
+                    {formatPrice(productsTotal)} تومان
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">
+                    هزینه ارسال با پست
+                  </span>
+
+                  <span className="font-bold text-slate-900">
+                    {formatPrice(SHIPPING_COST)} تومان
+                  </span>
+                </div>
+              </div>
+
               <div className="mt-5">
                 <p className="text-sm font-bold text-slate-900">
-                  مبلغ سفارش
+                  مبلغ نهایی سفارش
                 </p>
 
                 {hasUnpricedProducts ? (
@@ -226,7 +265,7 @@ export default function CartPage() {
                   </p>
                 ) : (
                   <p className="mt-3 text-2xl font-extrabold text-orange-600">
-                    {formatPrice(totalPrice)} تومان
+                    {formatPrice(finalTotal)} تومان
                   </p>
                 )}
               </div>
@@ -250,9 +289,7 @@ export default function CartPage() {
       </section>
 
       <footer className="mt-16 bg-slate-950 px-5 py-8 text-center text-sm text-gray-400">
-        <p>
-          Oilino؛ انتخاب هوشمندانه برای سلامت موتور
-        </p>
+        <p>Oilino؛ انتخاب هوشمندانه برای سلامت موتور</p>
       </footer>
     </main>
   );

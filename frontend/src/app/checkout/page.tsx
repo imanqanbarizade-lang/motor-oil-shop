@@ -6,6 +6,8 @@ import { useState } from "react";
 import { useCart } from "../../context/CartContext";
 import { createOrder } from "../../lib/api";
 
+const SHIPPING_COST = 200000;
+
 export default function CheckoutPage() {
   const router = useRouter();
   const { cartItems, cartCount, clearCart } = useCart();
@@ -25,6 +27,16 @@ export default function CheckoutPage() {
 
   const inputClass =
     "w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-gray-800 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100";
+
+  const formatPrice = (price: number) =>
+    new Intl.NumberFormat("fa-IR").format(price);
+
+  const productsTotal = cartItems.reduce(
+    (total, item) => total + item.price * item.quantity,
+    0
+  );
+
+  const finalTotal = productsTotal + SHIPPING_COST;
 
   const hasInvalidProduct = cartItems.some(
     (item) =>
@@ -89,7 +101,10 @@ export default function CheckoutPage() {
       clearCart();
 
       router.push(
-        "/checkout/success?order=" + result.id + "&amount=" + result.total_amount
+        "/checkout/success?order=" +
+          result.id +
+          "&amount=" +
+          result.total_amount
       );
     } catch (err) {
       console.error("خطا در ثبت سفارش:", err);
@@ -307,6 +322,10 @@ export default function CheckoutPage() {
                       <p className="mt-1 text-xs text-gray-500">
                         {item.viscosity} - {item.volume}
                       </p>
+
+                      <p className="mt-2 text-xs text-gray-500">
+                        {formatPrice(item.price)} تومان برای هر عدد
+                      </p>
                     </div>
 
                     <span className="text-sm font-bold">
@@ -324,9 +343,64 @@ export default function CheckoutPage() {
                 <span className="font-bold">{cartCount} عدد</span>
               </div>
 
-              <p className="mt-5 rounded-xl bg-orange-50 p-4 text-sm leading-7 text-orange-700">
-                مبلغ نهایی سفارش در سمت سرور و بر اساس قیمت ثبت‌شده محصولات
-                محاسبه می‌شود.
+              <div className="mt-6 rounded-xl border border-orange-100 bg-orange-50 p-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">📦</span>
+
+                  <div>
+                    <p className="font-bold text-slate-900">
+                      روش ارسال: پست
+                    </p>
+
+                    <p className="mt-1 text-sm leading-6 text-gray-600">
+                      سفارش شما توسط پست ارسال می‌شود.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 space-y-4 border-b border-gray-100 pb-5">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">
+                    مبلغ محصولات
+                  </span>
+
+                  <span className="font-bold text-slate-900">
+                    {formatPrice(productsTotal)} تومان
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">
+                    هزینه ارسال با پست
+                  </span>
+
+                  <span className="font-bold text-slate-900">
+                    {formatPrice(SHIPPING_COST)} تومان
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-5">
+                <p className="text-sm font-bold text-slate-900">
+                  مبلغ نهایی سفارش
+                </p>
+
+                {hasInvalidProduct ? (
+                  <p className="mt-3 text-sm leading-7 text-red-500">
+                    قیمت یا اطلاعات بعضی محصولات معتبر نیست و مبلغ نهایی قابل
+                    محاسبه نیست.
+                  </p>
+                ) : (
+                  <p className="mt-3 text-2xl font-extrabold text-orange-600">
+                    {formatPrice(finalTotal)} تومان
+                  </p>
+                )}
+              </div>
+
+              <p className="mt-5 rounded-xl bg-gray-50 p-4 text-xs leading-7 text-gray-500">
+                مبلغ نهایی سفارش در سمت سرور و بر اساس قیمت ثبت‌شده محصولات و
+                هزینه ارسال محاسبه می‌شود.
               </p>
             </aside>
           </div>
@@ -339,4 +413,3 @@ export default function CheckoutPage() {
     </main>
   );
 }
-

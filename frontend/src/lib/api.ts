@@ -39,6 +39,12 @@ export interface CreateProductData {
   price: number;
   stock: number;
   is_available: boolean;
+  image?: File | null;
+}
+
+// اطلاعات ویرایش محصول
+export interface UpdateProductData extends Partial<CreateProductData> {
+  remove_image?: boolean;
 }
 
 // ورود مدیر
@@ -118,6 +124,7 @@ export interface CreateOrderResponse {
   full_name: string;
   phone: string;
   total_amount: number;
+  shipping_cost?: number;
   status: string;
   created_at: string;
 }
@@ -143,6 +150,7 @@ export interface CustomerOrder {
   description: string;
   order_items: CustomerOrderItem[];
   total_amount: number;
+  shipping_cost?: number;
   status: string;
   payment_status: string;
   payment_receipt: string | null;
@@ -412,41 +420,81 @@ export async function getProductBySlug(
   return response.json();
 }
 
-// ثبت محصول جدید
+// ثبت محصول جدید همراه با تصویر
 export async function createProduct(
   productData: CreateProductData
 ): Promise<ApiProduct> {
   const csrfToken = await getCsrfToken();
 
+  const formData = new FormData();
+
+  formData.append("category_id", String(productData.category_id));
+  formData.append("name", productData.name);
+  formData.append("brand", productData.brand);
+  formData.append("viscosity", productData.viscosity);
+  formData.append("api_standard", productData.api_standard);
+  formData.append("volume", String(productData.volume));
+  formData.append("description", productData.description);
+  formData.append("price", String(productData.price));
+  formData.append("stock", String(productData.stock));
+  formData.append("is_available", String(productData.is_available));
+
+  if (productData.image) {
+    formData.append("image", productData.image);
+  }
+
   const response = await fetch(`${API_BASE_URL}/products/create/`, {
     method: "POST",
     credentials: "include",
     headers: {
-      "Content-Type": "application/json",
       "X-CSRFToken": csrfToken,
     },
-    body: JSON.stringify(productData),
+    body: formData,
   });
 
-  const errorData = await response.json().catch(() => null);
+  const result = await response.json().catch(() => null);
 
   if (!response.ok) {
     throw new Error(
-      errorData
-        ? JSON.stringify(errorData)
+      result
+        ? JSON.stringify(result)
         : "ثبت محصول با خطا مواجه شد."
     );
   }
 
-  return errorData;
+  return result;
 }
 
-// ویرایش محصول
+// ویرایش محصول همراه با تصویر
 export async function updateProduct(
   productId: number,
-  productData: Partial<CreateProductData>
+  productData: UpdateProductData
 ): Promise<ApiProduct> {
   const csrfToken = await getCsrfToken();
+
+  const formData = new FormData();
+
+  Object.entries(productData).forEach(([key, value]) => {
+    if (
+      key !== "image" &&
+      key !== "remove_image" &&
+      value !== undefined &&
+      value !== null
+    ) {
+      formData.append(key, String(value));
+    }
+  });
+
+  if (productData.image) {
+    formData.append("image", productData.image);
+  }
+
+  if (productData.remove_image !== undefined) {
+    formData.append(
+      "remove_image",
+      String(productData.remove_image)
+    );
+  }
 
   const response = await fetch(
     `${API_BASE_URL}/products/${productId}/update/`,
@@ -454,24 +502,23 @@ export async function updateProduct(
       method: "PATCH",
       credentials: "include",
       headers: {
-        "Content-Type": "application/json",
         "X-CSRFToken": csrfToken,
       },
-      body: JSON.stringify(productData),
+      body: formData,
     }
   );
 
-  const errorData = await response.json().catch(() => null);
+  const result = await response.json().catch(() => null);
 
   if (!response.ok) {
     throw new Error(
-      errorData
-        ? JSON.stringify(errorData)
+      result
+        ? JSON.stringify(result)
         : "ویرایش محصول با خطا مواجه شد."
     );
   }
 
-  return errorData;
+  return result;
 }
 
 // ثبت سفارش مشتری
@@ -519,8 +566,31 @@ export async function getMyOrders(): Promise<CustomerOrder[]> {
     );
   }
 
-  // پشتیبانی از پاسخ معمولی و پاسخ صفحه‌بندی‌شده
   return Array.isArray(result) ? result : result?.results || [];
+}
+
+// دریافت اطلاعات فاکتور سفارش
+export async function getOrderInvoice(
+  orderId: number
+): Promise<CustomerOrder> {
+  const response = await fetch(
+    `${API_BASE_URL}/orders/${orderId}/invoice/`,
+    {
+      method: "GET",
+      credentials: "include",
+      cache: "no-store",
+    }
+  );
+
+  const result = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(
+      result?.error || "دریافت فاکتور با خطا مواجه شد."
+    );
+  }
+
+  return result;
 }
 
 // ارسال فیش واریزی سفارش

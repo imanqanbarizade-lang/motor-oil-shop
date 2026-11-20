@@ -1,5 +1,6 @@
 from django.db import models
 from django.core.validators import MinValueValidator
+from django.utils.text import slugify
 
 
 # ==========================================
@@ -112,6 +113,53 @@ class Product(models.Model):
         auto_now=True,
         verbose_name="آخرین بروزرسانی"
     )
+
+    def generate_unique_slug(self):
+
+        # تلاش اول: استفاده از نام محصول
+        base_slug = slugify(self.name)
+
+        # تلاش دوم: استفاده از برند، گرانروی و استاندارد
+        if not base_slug:
+            base_slug = slugify(
+                f"{self.brand} {self.viscosity} {self.api_standard}"
+            )
+
+        # اگر باز هم اسلاگ خالی بود
+        if not base_slug:
+            base_slug = f"product-{self.pk or 'new'}"
+
+        # محدودیت طول اسلاگ
+        base_slug = base_slug[:180]
+
+        candidate_slug = base_slug
+        counter = 2
+
+        # جلوگیری از تکراری شدن اسلاگ
+        while Product.objects.filter(
+            slug=candidate_slug
+        ).exclude(pk=self.pk).exists():
+
+            suffix = f"-{counter}"
+            candidate_slug = f"{base_slug[:200 - len(suffix)]}{suffix}"
+            counter += 1
+
+        return candidate_slug
+
+    def save(self, *args, **kwargs):
+
+        # برای محصول جدید یا محصولی که اسلاگ ندارد
+        if not self.slug:
+            self.slug = self.generate_unique_slug()
+
+        # اگر اسلاگ محصول با محصول دیگری تداخل داشته باشد
+        elif Product.objects.filter(
+            slug=self.slug
+        ).exclude(pk=self.pk).exists():
+
+            self.slug = self.generate_unique_slug()
+
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name

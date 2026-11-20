@@ -10,6 +10,8 @@ import {
   getCurrentCustomer,
 } from "../../../lib/api";
 
+import InvoiceButton from "./InvoiceButton";
+
 function formatPrice(price: number) {
   return new Intl.NumberFormat("fa-IR").format(price) + " تومان";
 }
@@ -73,7 +75,6 @@ export default function CustomerOrdersPage() {
     async function loadOrders() {
       try {
         await getCurrentCustomer();
-
         const result = await getMyOrders();
 
         if (active) {
@@ -121,7 +122,6 @@ export default function CustomerOrdersPage() {
       className="min-h-screen bg-slate-50 px-4 py-10"
     >
       <div className="mx-auto max-w-5xl">
-
         {/* سربرگ */}
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -202,7 +202,6 @@ export default function CustomerOrdersPage() {
         {/* فهرست سفارش‌ها */}
         {!error && orders.length > 0 && (
           <div className="space-y-6">
-
             <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
               <p className="text-sm text-slate-500">
                 تعداد سفارش‌های ثبت‌شده
@@ -252,7 +251,6 @@ export default function CustomerOrdersPage() {
                 </div>
 
                 <div className="p-5">
-
                   {/* محصولات سفارش */}
                   <h3 className="mb-4 font-bold text-slate-800">
                     محصولات سفارش
@@ -317,7 +315,7 @@ export default function CustomerOrdersPage() {
                     </div>
                   </div>
 
-                  {/* وضعیت پرداخت و مبلغ */}
+                  {/* وضعیت پرداخت، فاکتور و مبلغ */}
                   <div className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-xl bg-orange-50 p-4">
                     <div>
                       <p className="text-xs text-slate-500">
@@ -331,6 +329,11 @@ export default function CustomerOrdersPage() {
                       >
                         {getPaymentStatus(order.payment_status)}
                       </span>
+
+                      {/* دکمه دریافت فاکتور */}
+                      <div className="mt-3">
+                        <InvoiceButton order={order} />
+                      </div>
                     </div>
 
                     <div className="text-left">
@@ -343,13 +346,11 @@ export default function CustomerOrdersPage() {
                       </p>
                     </div>
                   </div>
-
                 </div>
               </section>
             ))}
           </div>
         )}
-
       </div>
     </main>
   );

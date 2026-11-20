@@ -24,7 +24,7 @@ class ProductListView(generics.ListAPIView):
     serializer_class = ProductSerializer
 
 
-# نمایش تمام محصولات (فعال و غیرفعال) برای مدیر
+# نمایش تمام محصولات برای مدیر
 class AdminProductListView(generics.ListAPIView):
     queryset = Product.objects.all().order_by('-created_at')
     serializer_class = ProductSerializer
@@ -45,6 +45,34 @@ class ProductUpdateView(generics.UpdateAPIView):
     permission_classes = [IsAdminUser]
     lookup_field = 'id'
     lookup_url_kwarg = 'product_id'
+
+    def perform_update(self, serializer):
+        old_image = self.get_object().image
+
+        remove_image = str(
+            self.request.data.get("remove_image", "")
+        ).lower() in ["true", "1", "yes"]
+
+        new_image = self.request.FILES.get("image")
+
+        updated_product = serializer.save()
+
+        # اگر درخواست حذف تصویر داده شده باشد
+        # و تصویر جدیدی ارسال نشده باشد
+        if remove_image and not new_image:
+            if old_image:
+                old_image.delete(save=False)
+
+            updated_product.image = None
+            updated_product.save(update_fields=["image"])
+
+        # اگر تصویر جدید جایگزین تصویر قبلی شده باشد
+        elif (
+            old_image
+            and updated_product.image
+            and old_image.name != updated_product.image.name
+        ):
+            old_image.delete(save=False)
 
 
 # جزئیات محصول

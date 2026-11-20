@@ -72,6 +72,26 @@ const productDetails: Record<
   },
 };
 
+function normalizeSearchText(
+  value: string | number | null | undefined
+): string {
+  return String(value ?? "")
+    .normalize("NFKC")
+    .replace(/[يى]/g, "ی")
+    .replace(/ك/g, "ک")
+    .replace(/[\u064B-\u065F\u0670]/g, "")
+    .replace(/[\u200c\u200e\u200f]/g, " ")
+    .replace(/[۰-۹]/g, (digit) =>
+      String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit))
+    )
+    .replace(/[٠-٩]/g, (digit) =>
+      String("٠١٢٣٤٥٦٧٨٩".indexOf(digit))
+    )
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
 function Logo() {
   return (
     <div className="flex items-center gap-2">
@@ -122,25 +142,41 @@ export default function Home() {
     loadProducts();
   }, []);
 
+  const normalizedSearchTerm = normalizeSearchText(searchTerm);
+
   const filteredProducts = products.filter((product) => {
-    const searchText = searchTerm.trim().toLowerCase();
+    if (!normalizedSearchTerm) {
+      return true;
+    }
+
     const details = productDetails[product.slug];
 
-    const productInfo = [
-      details?.brand,
-      product.brand,
-      product.name,
-      details?.model,
-      product.viscosity,
-      product.api_standard,
-      details?.volume,
-      product.volume,
-    ]
-      .join(" ")
-      .toLowerCase();
+    const productInfo = normalizeSearchText(
+      [
+        product.slug,
+        details?.brand,
+        product.brand,
+        product.name,
+        details?.model,
+        product.viscosity,
+        product.api_standard,
+        details?.volume,
+        product.volume,
+        product.category?.name,
+      ].join(" ")
+    );
 
-    return productInfo.includes(searchText);
+    return productInfo.includes(normalizedSearchTerm);
   });
+
+  const scrollToProducts = () => {
+    document
+      .getElementById("products")
+      ?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+  };
 
   return (
     <main className="min-h-screen bg-gray-50 text-gray-800" dir="rtl">
@@ -160,6 +196,11 @@ export default function Home() {
                 type="text"
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && searchTerm.trim()) {
+                    scrollToProducts();
+                  }
+                }}
                 placeholder="جست‌وجوی روغن موتور، برند یا محصول..."
                 className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-5 py-4 text-sm outline-none transition focus:border-orange-500 focus:bg-white"
               />
@@ -168,12 +209,36 @@ export default function Home() {
                 🔍
               </span>
             </div>
+
+            {searchTerm.trim() !== "" && (
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-orange-100 bg-orange-50 px-4 py-3">
+                <span className="text-xs font-bold text-slate-700">
+                  {loading
+                    ? "در حال جست‌وجو..."
+                    : filteredProducts.length > 0
+                      ? `${new Intl.NumberFormat("fa-IR").format(filteredProducts.length)} محصول پیدا شد`
+                      : "محصولی پیدا نشد"}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={scrollToProducts}
+                  disabled={loading}
+                  className="rounded-lg bg-orange-500 px-4 py-2 text-xs font-bold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  مشاهده نتایج ↓
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-3">
-            <button className="rounded-xl border border-gray-200 px-5 py-3 text-sm font-bold transition hover:border-orange-500 hover:text-orange-500">
+            <Link
+              href="/account/login"
+              className="rounded-xl border border-gray-200 px-5 py-3 text-sm font-bold transition hover:border-orange-500 hover:text-orange-500"
+            >
               ورود / ثبت‌نام
-            </button>
+            </Link>
 
             <Link
               href="/cart"
@@ -247,11 +312,7 @@ export default function Home() {
             </p>
 
             <button
-              onClick={() =>
-                document
-                  .getElementById("products")
-                  ?.scrollIntoView({ behavior: "smooth" })
-              }
+              onClick={scrollToProducts}
               className="rounded-xl bg-orange-500 px-8 py-4 font-bold text-white transition hover:bg-orange-600"
             >
               مشاهده محصولات ←
@@ -329,15 +390,19 @@ export default function Home() {
 
       <section
         id="products"
-        className="mx-auto max-w-7xl px-5 py-12"
+        className="mx-auto max-w-7xl scroll-mt-40 px-5 py-12"
       >
         <div className="mb-8">
           <h2 className="text-2xl font-extrabold text-slate-900">
-            محصولات روغن موتور
+            {searchTerm.trim()
+              ? "نتایج جست‌وجو"
+              : "محصولات روغن موتور"}
           </h2>
 
           <p className="mt-2 text-sm text-gray-500">
-            محصولات برندهای مختلف را بررسی و مقایسه کنید.
+            {searchTerm.trim()
+              ? `نتایج مرتبط با «${searchTerm}»`
+              : "محصولات برندهای مختلف را بررسی و مقایسه کنید."}
           </p>
         </div>
 
@@ -350,6 +415,7 @@ export default function Home() {
         {!loading && error && (
           <div className="rounded-2xl border border-red-100 bg-white py-16 text-center">
             <p className="text-sm font-bold text-red-500">{error}</p>
+
             <p className="mt-3 text-xs text-gray-500">
               اتصال سرور Django را بررسی کنید.
             </p>
@@ -360,15 +426,24 @@ export default function Home() {
           <>
             {searchTerm.trim() !== "" && (
               <p className="mb-6 text-sm text-gray-500">
-                تعداد محصولات پیدا شده: {filteredProducts.length}
+                تعداد محصولات پیدا شده:{" "}
+                {new Intl.NumberFormat("fa-IR").format(
+                  filteredProducts.length
+                )}
               </p>
             )}
 
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-4">
               {filteredProducts.map((product) => {
                 const details = productDetails[product.slug];
+
                 const isOutOfStock =
                   product.stock <= 0 || !product.is_available;
+
+                // اولویت با تصویر آپلودشده در پنل مدیریت است.
+                // اگر تصویر نداشته باشد، تصویر پیش‌فرض نمایش داده می‌شود.
+                const image =
+                  product.image || details?.image || null;
 
                 return (
                   <div
@@ -376,11 +451,12 @@ export default function Home() {
                     className="overflow-hidden rounded-2xl border border-gray-100 bg-white p-5 transition hover:-translate-y-1 hover:shadow-xl"
                   >
                     <div className="relative flex h-52 items-center justify-center rounded-xl bg-gray-50 p-3">
-                      {details?.image ? (
+                      {image ? (
                         <Image
-                          src={details.image}
-                          alt={`${details.brand} ${product.viscosity}`}
+                          src={image}
+                          alt={`${product.brand} ${product.viscosity}`}
                           fill
+                          unoptimized
                           sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 25vw"
                           className={`object-contain p-3 ${
                             isOutOfStock ? "opacity-50" : ""
@@ -423,7 +499,9 @@ export default function Home() {
 
                     {product.price > 0 ? (
                       <p className="mt-4 font-bold text-slate-900">
-                        {new Intl.NumberFormat("fa-IR").format(product.price)}{" "}
+                        {new Intl.NumberFormat("fa-IR").format(
+                          product.price
+                        )}{" "}
                         تومان
                       </p>
                     ) : (
@@ -434,12 +512,16 @@ export default function Home() {
 
                     <p
                       className={`mt-3 text-xs font-medium ${
-                        isOutOfStock ? "text-red-600" : "text-green-700"
+                        isOutOfStock
+                          ? "text-red-600"
+                          : "text-green-700"
                       }`}
                     >
                       {isOutOfStock
                         ? "این محصول در حال حاضر موجود نیست."
-                        : `موجودی: ${new Intl.NumberFormat("fa-IR").format(product.stock)} عدد`}
+                        : `موجودی: ${new Intl.NumberFormat("fa-IR").format(
+                            product.stock
+                          )} عدد`}
                     </p>
 
                     <Link
@@ -471,7 +553,7 @@ export default function Home() {
 
                 <button
                   onClick={() => setSearchTerm("")}
-                  className="mt-6 rounded-xl bg-orange-500 px-6 py-3 text-sm font-bold text-white transition"
+                  className="mt-6 rounded-xl bg-orange-500 px-6 py-3 text-sm font-bold text-white transition hover:bg-orange-600"
                 >
                   پاک کردن جست‌وجو
                 </button>

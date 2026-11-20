@@ -40,6 +40,32 @@ class CustomerOrderListView(generics.ListAPIView):
         ).order_by("-created_at")
 
 
+# دریافت اطلاعات فاکتور فقط پس از تأیید پرداخت
+class CustomerOrderInvoiceView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, order_id):
+        order = get_object_or_404(
+            Order.objects.prefetch_related("items__product"),
+            id=order_id,
+            user=request.user
+        )
+
+        if order.payment_status != "approved":
+            return Response(
+                {
+                    "error": "فاکتور این سفارش فقط پس از تأیید پرداخت توسط مدیر قابل دریافت است.",
+                    "payment_status": order.payment_status
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        return Response(
+            OrderSerializer(order).data,
+            status=status.HTTP_200_OK
+        )
+
+
 # اعتبارسنجی اطلاعات فیش واریزی
 class ReceiptUploadSerializer(serializers.Serializer):
     phone = serializers.CharField(max_length=20)

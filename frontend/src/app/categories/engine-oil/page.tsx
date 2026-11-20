@@ -16,17 +16,6 @@ const productImages: Record<string, string> = {
   "dallas-5w30": "/images/dallas-5w30.jpg",
 };
 
-const brandNames: Record<string, string> = {
-  "سینولکس": "سینولکس",
-  "لیکومولی": "لیکومولی",
-  "لوبریفنت کانادا": "لوبریفنت کانادا",
-  "ساتل": "ساتل",
-  "آترود": "آترود",
-  "کاسپین": "کاسپین",
-  "کاسترول": "کاسترول",
-  "دالاس": "دالاس",
-};
-
 export default function EngineOilPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [products, setProducts] = useState<ApiProduct[]>([]);
@@ -140,6 +129,7 @@ export default function EngineOilPage() {
         {error && !loading && (
           <div className="rounded-2xl bg-white py-16 text-center">
             <p className="font-bold text-red-600">{error}</p>
+
             <button
               onClick={() => window.location.reload()}
               className="mt-5 rounded-xl bg-orange-500 px-6 py-3 text-white"
@@ -155,7 +145,8 @@ export default function EngineOilPage() {
               const isOutOfStock =
                 product.stock <= 0 || !product.is_available;
 
-              const image = productImages[product.slug];
+              const image =
+                product.image || productImages[product.slug] || null;
 
               return (
                 <div
@@ -168,6 +159,7 @@ export default function EngineOilPage() {
                         src={image}
                         alt={`${product.brand} ${product.viscosity}`}
                         fill
+                        unoptimized
                         sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 25vw"
                         className={`object-contain p-3 ${
                           isOutOfStock ? "opacity-50" : ""
@@ -208,7 +200,10 @@ export default function EngineOilPage() {
 
                   {product.price > 0 ? (
                     <p className="mt-4 font-bold text-slate-900">
-                      {new Intl.NumberFormat("fa-IR").format(product.price)} تومان
+                      {new Intl.NumberFormat("fa-IR").format(
+                        product.price
+                      )}{" "}
+                      تومان
                     </p>
                   ) : (
                     <p className="mt-4 text-xs text-gray-400">
@@ -223,7 +218,9 @@ export default function EngineOilPage() {
                   >
                     {isOutOfStock
                       ? "این محصول در حال حاضر موجود نیست."
-                      : `موجودی: ${new Intl.NumberFormat("fa-IR").format(product.stock)} عدد`}
+                      : `موجودی: ${new Intl.NumberFormat("fa-IR").format(
+                          product.stock
+                        )} عدد`}
                   </p>
 
                   <Link

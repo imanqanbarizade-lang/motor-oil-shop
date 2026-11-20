@@ -32,6 +32,7 @@ export interface OrderResponse {
   postal_code?: string;
   description?: string;
   total_amount: number;
+  shipping_cost?: number;
   status: string;
   created_at: string;
   order_items?: OrderItem[];

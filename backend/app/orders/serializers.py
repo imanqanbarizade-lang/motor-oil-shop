@@ -5,6 +5,9 @@ from products.models import Product
 from .models import Order, OrderItem
 
 
+SHIPPING_COST = 200000
+
+
 class OrderItemSerializer(serializers.Serializer):
 
     product_id = serializers.PrimaryKeyRelatedField(
@@ -44,6 +47,7 @@ class OrderSerializer(serializers.ModelSerializer):
             "description",
             "items",
             "order_items",
+            "shipping_cost",
             "total_amount",
             "status",
             "payment_status",
@@ -55,6 +59,7 @@ class OrderSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "id",
             "order_items",
+            "shipping_cost",
             "total_amount",
             "status",
             "payment_status",
@@ -105,18 +110,28 @@ class OrderSerializer(serializers.ModelSerializer):
 
         items_data = validated_data.pop("items")
 
-        total_amount = sum(
+        products_total = sum(
             item["product"].price * item["quantity"]
             for item in items_data
         )
 
-        # اتصال سفارش به حساب مشتری در صورت ورود
+        shipping_cost = SHIPPING_COST
+
+        total_amount = products_total + shipping_cost
+
         request = self.context.get("request")
 
-        if request and request.user.is_authenticated:
+        # اتصال سفارش فقط به حساب معتبر مشتری
+        if (
+            request
+            and request.user.is_authenticated
+            and not request.user.is_staff
+            and hasattr(request.user, "customer_profile")
+        ):
             validated_data["user"] = request.user
 
         order = Order.objects.create(
+            shipping_cost=shipping_cost,
             total_amount=total_amount,
             **validated_data
         )
